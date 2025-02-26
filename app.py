@@ -1,5 +1,7 @@
 import os
 from flask import Flask, request, send_file, render_template
+
+
 from werkzeug.utils import secure_filename
 
 from PyPDF2 import PdfReader
@@ -99,7 +101,8 @@ def index():
         
         return send_file(ppt_path, as_attachment=True)
     
-    return render_template('index.html')
+    return render_template('index.html')  # Update this path if necessary
+
 
 if __name__ == '__main__':
     app.run(host='192.168.137.1', debug=True)
