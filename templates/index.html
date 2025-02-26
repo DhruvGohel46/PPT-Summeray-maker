@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+  <head>
+    <title>PPT Summary Maker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+  </head>
+  <body>
+    <h1>Upload Your Document</h1>
+    <form method="post" enctype="multipart/form-data">
+      <input type="file" name="datafile" accept=".pdf, .docx" required>
+      <input type="submit" value="Upload and Generate PPT">
+    </form>
+  </body>
+</html>
