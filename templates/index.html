@@ -1,14 +1,29 @@
 <!doctype html>
 <html>
   <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PPT Summary Maker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css')}}">
   </head>
   <body>
-    <h1>Upload Your Document</h1>
-    <form method="post" enctype="multipart/form-data">
-      <input type="file" name="datafile" accept=".pdf, .docx" required>
-      <input type="submit" value="Upload and Generate PPT">
-    </form>
+    <header>
+      <h1>PPT Summary Maker</h1>
+    </header>
+    <main>
+      <div class="container">
+        <p>Upload your document (PDF or DOCX) to generate a summary PPT.</p>
+        <form method="post" enctype="multipart/form-data">
+          <label for="datafile">Choose a file:</label>
+          <input type="file" id="datafile" name="datafile" accept=".pdf, .docx" required>
+          <input type="submit" value="Upload and Generate PPT">
+        </form>
+        <div id="loading" class="hidden">Processing...</div>
+        <div id="notification" class="hidden"></div>
+      </div>
+    </main>
+    <footer>
+      <p>&copy; 2025 PPT Summary Maker. All rights reserved.</p>
+    </footer>
   </body>
 </html>
