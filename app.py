@@ -95,11 +95,16 @@ def index():
         else:
             return "Unsupported file type. Please upload a PDF or DOCX file.", 400
 
-        summary = summarize_text(text)
+        if text:
+            summary = summarize_text(text)
+        else:
+            return "Error processing the file.", 400
+
         ppt_path = os.path.join(app.config['OUTPUT_FOLDER'], 'summary_presentation.pptx')
         create_ppt(summary, ppt_path)
         
-        return send_file(ppt_path, as_attachment=True)
+        return send_file(ppt_path, as_attachment=True)  # Send the generated PPT back to the user
+
     
     return render_template('index.html')  # Update this path if necessary
 
