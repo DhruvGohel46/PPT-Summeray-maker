@@ -1,104 +1,71 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PPT Summary Maker</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='index.css')}}">
-  </head>
-  <body>
-    <header>
-      <h1>PPT Summary Maker</h1>
-    </header>
-    <main>
-      <div class="container">
-        <p>Upload your document (PDF or DOCX) to generate a summary PPT.</p>
-<form method="post" enctype="multipart/form-data" action="/">
 
-          <label for="template">Select a template:</label>
-          <div class="template-previews">
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Aura presentation deck_preview.png') }}" alt="Aura Presentation Deck Preview">
-              <input type="radio" id="template_aura" name="template" value="Aura presentation deck">
-              <label for="template_aura">Aura Presentation Deck</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Bjorn design_preview.png') }}" alt="Bjorn Design Preview">
-              <input type="radio" id="template_bjorn" name="template" value="Bjorn design">
-              <label for="template_bjorn">Bjorn Design</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Colorful conference presentation_preview.png') }}" alt="Colorful Conference Presentation Preview">
-              <input type="radio" id="template_colorful" name="template" value="Colorful conference presentation">
-              <label for="template_colorful">Colorful Conference Presentation</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Geometric annual presentation_preview.png') }}" alt="Geometric Annual Presentation Preview">
-              <input type="radio" id="template_geometric" name="template" value="Geometric annual presentation">
-              <label for="template_geometric">Geometric Annual Presentation</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Hexagon presentation light_preview.png') }}" alt="Hexagon Presentation Light Preview">
-              <input type="radio" id="template_hexagon" name="template" value="Hexagon presentation light">
-              <label for="template_hexagon">Hexagon Presentation Light</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Jewish American Heritage Month presentation_preview.png') }}" alt="Jewish American Heritage Month Presentation Preview">
-              <input type="radio" id="template_jewish" name="template" value="Jewish American Heritage Month presentation">
-              <label for="template_jewish">Jewish American Heritage Month Presentation</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Light modernist presentation_preview.png') }}" alt="Light Modernist Presentation Preview">
-              <input type="radio" id="template_light_modernist" name="template" value="Light modernist presentation">
-              <label for="template_light_modernist">Light Modernist Presentation</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Pastels Presentation_preview.png') }}" alt="Pastels Presentation Preview">
-              <input type="radio" id="template_pastels" name="template" value="Pastels Presentation">
-              <label for="template_pastels">Pastels Presentation</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Prismatic design_preview.png') }}" alt="Prismatic Design Preview">
-              <input type="radio" id="template_prismatic" name="template" value="Prismatic design">
-              <label for="template_prismatic">Prismatic Design</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Shapes presentation_preview.png') }}" alt="Shapes Presentation Preview">
-              <input type="radio" id="template_shapes" name="template" value="Shapes presentation">
-              <label for="template_shapes">Shapes Presentation</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Training presentation_preview.png') }}" alt="Training Presentation Preview">
-              <input type="radio" id="template_training" name="template" value="Training presentation">
-              <label for="template_training">Training Presentation</label>
-            </div>
-            <div class="template-preview">
-              <img src="{{ url_for('static', filename='PPT templates/Universal presentation_preview.png') }}" alt="Universal Presentation Preview">
-              <input type="radio" id="template_universal" name="template" value="Universal presentation">
-              <label for="template_universal">Universal Presentation</label>
-            </div>
-          </div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PPT Summary Maker</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='index.css')}}">
+</head>
 
+<body>
+  <header>
+    <h1>PPT Summary Maker</h1>
+  </header>
+  <main>
+    <div class="container">
+      <p>Upload your document (PDF or DOCX) to generate a summary PPT.</p>
+      <form method="post" enctype="multipart/form-data" action="/">
+        <fieldset>
+          <legend>Select Your Target Audience:</legend>
+          <label>
+            <input type="checkbox" name="audience" value="students">
+            Students
+          </label><br>
+          <label>
+            <input type="checkbox" name="audience" value="professionals">
+            Professionals
+          </label><br>
+          <label>
+            <input type="checkbox" name="audience" value="researchers">
+            Researchers
+          </label><br>
+          <label>
+            <input type="checkbox" name="audience" value="entrepreneurs">
+            Entrepreneurs
+          </label><br>
+          <label>
+            <input type="checkbox" name="audience" value="general">
+            General Audience
+          </label><br>
+        </fieldset>
 
-          <label for="datafile">Choose a file:</label>
-          <input type="file" id="datafile" name="datafile" accept=".pdf, .docx" required>
-          <input type="submit" value="Upload and Generate PPT">
-        </form>
-        <div id="loading" class="hidden">Processing...</div>        
-        <div id="template-selection" class="hidden">
-          <p>Please select a template to use:</p>
-          <input type="radio" id="template1" name="template" value="template1">
-          <label for="template1">Template 1</label><br>
-          <input type="radio" id="template2" name="template" value="template2">
-          <label for="template2">Template 2</label><br>
-          <!-- Additional templates will be added here -->
-        </div>
-
-        <div id="notification" class="hidden"></div>
+        <label for="goal">What is the goal of this presentation?</label>
+        <select name="goal" id="goal" required>
+          <option value="">--Choose an option--</option>
+          <option value="inform">Inform</option>
+          <option value="persuade">Persuade</option>
+          <option value="educate">Educate</option>
+          <option value="entertain">Entertain</option>
+          <option value="inspire">Inspire</option>
+        </select>
+        
+        <label for="datafile">Choose a file:</label>
+        <input type="file" id="datafile" name="datafile" accept=".pdf, .docx" required>
+        
+        <input type="submit" value="Upload and Generate PPT">
+      </form>
+      <div id="loading" class="hidden">Processing...</div>
+      
+      <!-- Additional templates will be added here -->
       </div>
-    </main>
-    <footer>
-      <p>&copy; 2025 PPT Summary Maker. All rights reserved.</p>
-    </footer>
-  </body>
+
+      <div id="notification" class="hidden"></div>
+    </div>
+  </main>
+  <footer>
+    <p>&copy; 2025 PPT Summary Maker. All rights reserved.</p>
+  </footer>
+</body>
+
 </html>

@@ -43,7 +43,8 @@ def summarize_text(text):
     summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
     return summary
 
-def create_ppt(summary, output_path='summary_presentation.pptx'):
+def create_ppt(summary, output_path='summary_presentation.pptx', goal=None, audience=None):
+
     prs = Presentation()
     slide_layout = prs.slide_layouts[1]  # Title and Content layout
     slide = prs.slides.add_slide(slide_layout)
@@ -60,7 +61,31 @@ def create_ppt(summary, output_path='summary_presentation.pptx'):
         textbox = slide.shapes.add_textbox(left, top, width, height)
         textbox.text = summary
 
+    # Customize the presentation based on the audience and goal
+    if audience:
+        if 'students' in audience:
+            slide = prs.slides.add_slide(prs.slide_layouts[1])
+            slide.shapes.title.text = "Presentation for Students"
+            slide.placeholders[1].text = "Content tailored for students."
+        elif 'professionals' in audience:
+            slide = prs.slides.add_slide(prs.slide_layouts[1])
+            slide.shapes.title.text = "Presentation for Professionals"
+            slide.placeholders[1].text = "Content tailored for professionals."
+        elif 'researchers' in audience:
+            slide = prs.slides.add_slide(prs.slide_layouts[1])
+            slide.shapes.title.text = "Presentation for Researchers"
+            slide.placeholders[1].text = "Content tailored for researchers."
+        elif 'entrepreneurs' in audience:
+            slide = prs.slides.add_slide(prs.slide_layouts[1])
+            slide.shapes.title.text = "Presentation for Entrepreneurs"
+            slide.placeholders[1].text = "Content tailored for entrepreneurs."
+        elif 'general' in audience:
+            slide = prs.slides.add_slide(prs.slide_layouts[1])
+            slide.shapes.title.text = "General Presentation"
+            slide.placeholders[1].text = "Content for a general audience."
+
     prs.save(output_path)
+
     print(f"Presentation saved as {output_path}")
 
 def main():
