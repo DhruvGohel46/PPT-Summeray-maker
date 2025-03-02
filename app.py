@@ -10,6 +10,8 @@ from pptx import Presentation
 from pptx.util import Inches
 from transformers import BartTokenizer, BartForConditionalGeneration
 
+from tools.templates import get_available_templates
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -86,7 +88,11 @@ def index():
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(upload_path)
 
-        # Determine file type
+        selected_template = request.form.get('template')  # Get selected template from form
+        selected_template = request.form.get('template')  # Get selected template from form
+        # Determine file type        
+
+
         ext = os.path.splitext(filename)[1].lower()
         if ext == '.pdf':
             text = extract_text_from_pdf(upload_path)
@@ -100,14 +106,20 @@ def index():
         else:
             return "Error processing the file.", 400
 
-        ppt_path = os.path.join(app.config['OUTPUT_FOLDER'], 'summary_presentation.pptx')
+        ppt_path = os.path.join(app.config['OUTPUT_FOLDER'], 'summary_presentation.pptx')        
+        create_ppt(summary, selected_template)  # Pass the selected template to create_ppt
+
+        create_ppt(summary, selected_template)  # Pass the selected template to create_ppt
+
         create_ppt(summary, ppt_path)
         
         return send_file(ppt_path, as_attachment=True)  # Send the generated PPT back to the user
 
     
-    return render_template('index.html')  # Update this path if necessary
+    templates = get_available_templates()
+    return render_template('index.html', templates=templates)  # Pass templates to the index.html
+
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.137.1', debug=True)
+    app.run(host='127.0.0.1', debug=True)
