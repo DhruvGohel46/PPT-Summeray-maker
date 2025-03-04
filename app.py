@@ -1,16 +1,23 @@
 import os
 import io
+import logging
 from flask import Flask, request, send_file, render_template, redirect, url_for, flash
 from werkzeug.utils import secure_filename
 from PyPDF2 import PdfReader
 import docx
 from pptx import Presentation
 from pptx.util import Inches
-from transformers import BartTokenizer, BartForConditionalGeneration
+import google.generativeai as genai
+
 from tools.templates import get_available_templates
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app.secret_key = 'your_secret_key'  # Replace with a strong secret key
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
@@ -47,19 +54,25 @@ def extract_text_from_docx(docx_path):
     return text
 
 # Summarize text using facebook/bart-large-cnn
-def summarize_text(text):
-    tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
-    model = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
-    inputs = tokenizer(text, return_tensors="pt", max_length=1024, truncation=True)
-    summary_ids = model.generate(
-        inputs.input_ids,
-        num_beams=4,
-        max_length=150,
-        min_length=50,
-        early_stopping=True
-    )
-    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-    return summary
+def summarize_text(text, goal=None, audience=None):
+    api_key = os.environ.get('GOOGLE_API_KEY')  # Retrieve the API key from environment variable
+    if not api_key:
+        raise ValueError("No API key found. Please set the GOOGLE_API_KEY environment variable.")
+        
+    genai.configure(api_key=api_key)  # Configure the API with the retrieved key
+
+
+
+    try:
+        genai.configure(api_key="AIzaSyATGHln42rKoibkMUByJp3cPYpO5322zUs")
+        model = genai.GenerativeModel("gemini-1.5-flash")
+
+        prompt = f"Please provide a concise summary of the following text:\n\n{text}"
+        response = model.generate_content(prompt)
+        return response.text if response and response.text else "Summary not generated."
+    except Exception as e:
+        return f"Error during summarization: {str(e)}"
+
 
 # Create a PowerPoint file with the summary
 def create_ppt(summary, output_path, goal=None, audience=None):
@@ -73,6 +86,7 @@ def create_ppt(summary, output_path, goal=None, audience=None):
     title_shape.text = "Summary"
     if goal:
         title_shape.text += f" - Goal: {goal}"  # Include the goal in the title
+    logger.info(f"Summary content: {summary}")
     if len(slide.placeholders) > 1:
         content_shape = slide.placeholders[1]
         content_shape.text = summary
@@ -100,46 +114,83 @@ def create_ppt(summary, output_path, goal=None, audience=None):
             # Add specific slides or content for general audience
             pass  # Implement specific logic for general audience
 
-    prs.save(output_path)
+    try:
+        prs.save(output_path)
+        logger.info(f"PowerPoint saved to {output_path}.")
+    except Exception as e:
+        logger.error(f"Error saving PowerPoint: {str(e)}")
 
 
 # Create a PowerPoint presentation customized based on the target audience
 def create_ppt_with_audience(audience_list: list) -> io.BytesIO:
     prs = Presentation()
-    slide_layout = prs.slide_layouts[0]  # Title slide layout
-    slide = prs.slides.add_slide(slide_layout)
     
+    # Create title slide
+    slide_layout = prs.slide_layouts[0]
+    slide = prs.slides.add_slide(slide_layout)
     title = slide.shapes.title
     subtitle = slide.placeholders[1]
-    
     title.text = "Presentation"
     
     # Determine a default subtitle
     custom_subtitle = "Customized Presentation"
     if 'students' in audience_list:
         custom_subtitle = TARGET_AUDIENCE_OPTIONS['students']
+        # Add multiple slides for students
         slide2 = prs.slides.add_slide(prs.slide_layouts[1])
         slide2.shapes.title.text = "Study Tips"
         slide2.placeholders[1].text = "Effective study habits and time management tips."
+        
+        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
+        slide3.shapes.title.text = "Learning Strategies"
+        slide3.placeholders[1].text = "Active learning and critical thinking techniques."
+        
     elif 'professionals' in audience_list:
         custom_subtitle = TARGET_AUDIENCE_OPTIONS['professionals']
+        # Add multiple slides for professionals
         slide2 = prs.slides.add_slide(prs.slide_layouts[1])
         slide2.shapes.title.text = "Professional Insights"
         slide2.placeholders[1].text = "Focus on productivity and career growth strategies."
+        
+        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
+        slide3.shapes.title.text = "Networking Tips"
+        slide3.placeholders[1].text = "Building professional relationships and connections."
+        
     elif 'researchers' in audience_list:
         custom_subtitle = TARGET_AUDIENCE_OPTIONS['researchers']
+        # Add multiple slides for researchers
         slide2 = prs.slides.add_slide(prs.slide_layouts[1])
         slide2.shapes.title.text = "Research Findings"
         slide2.placeholders[1].text = "Latest data and detailed analysis."
+        
+        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
+        slide3.shapes.title.text = "Methodology"
+        slide3.placeholders[1].text = "Research design and data collection techniques."
+        
     elif 'entrepreneurs' in audience_list:
         custom_subtitle = TARGET_AUDIENCE_OPTIONS['entrepreneurs']
+        # Add multiple slides for entrepreneurs
         slide2 = prs.slides.add_slide(prs.slide_layouts[1])
         slide2.shapes.title.text = "Entrepreneurial Strategies"
         slide2.placeholders[1].text = "Innovative ideas and market insights."
+        
+        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
+        slide3.shapes.title.text = "Business Planning"
+        slide3.placeholders[1].text = "Developing effective business plans and strategies."
+        
     elif 'general' in audience_list:
         custom_subtitle = TARGET_AUDIENCE_OPTIONS['general']
+        # Add multiple slides for general audience
+        slide2 = prs.slides.add_slide(prs.slide_layouts[1])
+        slide2.shapes.title.text = "Overview"
+        slide2.placeholders[1].text = "Key points and main takeaways."
+        
+        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
+        slide3.shapes.title.text = "Conclusion"
+        slide3.placeholders[1].text = "Summary and final thoughts."
     
     subtitle.text = f"Target Audience: {custom_subtitle}"
+
     
     # Save presentation to a BytesIO stream
     ppt_stream = io.BytesIO()
@@ -166,10 +217,26 @@ def target_audience():
     return render_template('target_audience.html', options=TARGET_AUDIENCE_OPTIONS)
 
 # Route for home page
+@app.route('/summarize', methods=['POST'])
+def summarize():
+    text = request.form.get('text', '').strip()
+    goal = request.form.get('goal', '').strip()
+    target_audience = request.form.get('audience', '').strip()
+    
+    if not text:
+        flash("Please enter text to summarize.")
+        return redirect(url_for('index'))
+
+    summary = summarize_text(text, goal, target_audience)
+    return render_template('summary.html', summary=summary)
+
 @app.route('/', methods=['GET', 'POST'])
+
 def index():
     if request.method == 'POST':
-        if 'datafile' not in request.files:
+        if 'datafile' not in request.files or request.files['datafile'].filename == '':
+
+
             return "No file part", 400
         file = request.files['datafile']
         if file.filename == '':
@@ -183,7 +250,8 @@ def index():
 
         # Determine file type        
         ext = os.path.splitext(filename)[1].lower()
-        if ext == '.pdf':
+        if ext == '.pdf' or ext == '.docx':
+
             text = extract_text_from_pdf(upload_path)
         elif ext == '.docx':
             text = extract_text_from_docx(upload_path)
@@ -191,7 +259,8 @@ def index():
             return "Unsupported file type. Please upload a PDF or DOCX file.", 400
 
         if text:
-            summary = summarize_text(text)
+            summary = summarize_text(text, goal=presentation_goal, audience=request.form.getlist('audience'))  # Pass goal and audience to summarize_text
+
         else:
             return "Error processing the file.", 400
 
@@ -203,6 +272,11 @@ def index():
 
     templates = get_available_templates()
     return render_template('index.html', templates=templates)  # Pass templates to the index.html
+    
+    # Ensure that the templates exist
+    if not os.path.exists('templates/target_audience.html') or not os.path.exists('templates/index.html'):
+        logger.error("Required template files are missing.")
+
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', debug=True)
+  app.run(host='127.0.0.1', debug=True)
