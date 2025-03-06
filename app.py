@@ -1,17 +1,15 @@
-import textwrap
 import os
 import io
 import logging
-from flask import Flask, request, send_file, render_template, redirect, url_for, flash
+from flask import Flask, request, send_file, render_template, redirect, url_for, flash, jsonify, session
 from werkzeug.utils import secure_filename
 from PyPDF2 import PdfReader
+
 import docx
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 import google.generativeai as genai
-
-from tools.templates import get_available_templates
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -23,12 +21,13 @@ logger = logging.getLogger(__name__)
 app.secret_key = 'your_secret_key'  # Replace with a strong secret key
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Ensure the directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 
-# List of target audience options for reference
+# List of target audience options
 TARGET_AUDIENCE_OPTIONS = {
     'students': "Designed for Students: Engaging and Informative",
     'professionals': "Targeting Professionals: Clear, Concise, Impactful",
@@ -37,274 +36,368 @@ TARGET_AUDIENCE_OPTIONS = {
     'general': "General Audience: Broad Overview"
 }
 
+# List of font options
+FONT_OPTIONS = {
+    # Default options (shown first)
+    'default': [
+        'Calibri', 'Arial', 'Times New Roman', 'Verdana', 
+        'Tahoma', 'Georgia', 'Segoe UI', 'Cambria',
+        'Century Gothic', 'Garamond'
+    ],
+    # Additional options (shown when "More options" is clicked)
+    'more': [
+        'Palatino Linotype', 'Book Antiqua', 'Trebuchet MS', 'Courier New',
+        'Franklin Gothic Medium', 'Lucida Sans', 'Constantia', 'Comic Sans MS',
+        'Candara', 'MS Sans Serif', 'Arial Black', 'Impact', 'Rockwell',
+        'Bookman Old Style', 'Copperplate Gothic', 'Bahnschrift', 'Consolas',
+        'Lucida Console', 'Baskerville Old Face', 'Bookshelf Symbol 7'
+    ]
+}
+
 # Function to extract text from a PDF
 def extract_text_from_pdf(pdf_path):
-    reader = PdfReader(pdf_path)
-    text = ""
-    for page in reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            text += page_text + "\n"
-    return text
+    try:
+        reader = PdfReader(pdf_path)
+        text = ""
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        return text
+    except Exception as e:
+        logger.error(f"Failed to read PDF file: {str(e)}")
+        return None
 
 # Function to extract text from a DOCX
 def extract_text_from_docx(docx_path):
-    doc = docx.Document(docx_path)
-    text = ""
-    for para in doc.paragraphs:
-        text += para.text + "\n"
-    return text
-
-# Summarize text using facebook/bart-large-cnn
-def summarize_text(text, goal=None, audience=None):
-    api_key = os.environ.get('GOOGLE_API_KEY')  # Retrieve the API key from environment variable
-    if not api_key:
-        raise ValueError("No API key found. Please set the GOOGLE_API_KEY environment variable.")
-        
-    genai.configure(api_key=api_key)  # Configure the API with the retrieved key
-
     try:
-        genai.configure(api_key="AIzaSyATGHln42rKoibkMUByJp3cPYpO5322zUs")
+        doc = docx.Document(docx_path)
+        text = ""
+        for para in doc.paragraphs:
+            text += para.text + "\n"
+        return text
+    except Exception as e:
+        logger.error(f"Failed to read DOCX file: {str(e)}")
+        return None
+
+# Summarize text using Google's Gemini model
+def summarize_text(text, goal=None, audience=None, num_slides=None):
+    try:
+        # Get API key from environment variable
+        api_key = os.environ.get('GOOGLE_API_KEY')
+        if not api_key:
+            logger.warning("No API key found in environment. Using fallback method.")
+            # Note: In production, remove this hardcoded key and use only environment variables
+            api_key = "AIzaSyATGHln42rKoibkMUByJp3cPYpO5322zUs"
+        
+        genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-1.5-flash")
 
         # Ensure goal and audience are not None or empty
         goal_text = goal if goal else "General goal"
         audience_text = audience if audience else "General audience"
+        slides_text = f" Please create content for {num_slides} slides." if num_slides else ""
 
         prompt = f"Please provide a concise summary of the following text. " \
-                  f"The goal of this presentation is: {goal_text}. " \
-                  f"The target audience is: {audience_text}. " \
-                  f"Text:\n\n{text}"
+                f"The goal of this presentation is: {goal_text}. " \
+                f"The target audience is: {audience_text}.{slides_text} " \
+                f"Text:\n\n{text}"
+        
         response = model.generate_content(prompt)
         return response.text if response and response.text else "Summary not generated."
     except Exception as e:
+        logger.error(f"Error during summarization: {str(e)}")
         return f"Error during summarization: {str(e)}"
 
+# Estimate number of slides needed for a summary
+def estimate_slides(summary):
+    # Simple estimation: about 30-40 words per slide
+    words = summary.split()
+    return max(1, len(words) // 35)
+
 # Create a PowerPoint file with the summary
-def create_ppt(summary, output_path, goal=None, audience=None):
+def create_ppt(summary, output_path, title=None, goal=None, audience=None, font_name='Calibri', num_slides=None):
     prs = Presentation()
-    slide_layout = prs.slide_layouts[1]  # Title and Content layout
-    slide = prs.slides.add_slide(slide_layout)
     
-    # Set title and content
-    title_shape = slide.shapes.title
-    title_shape.text = "Summary"
+    # Title slide
+    title_slide = prs.slides.add_slide(prs.slide_layouts[0])
+    title_placeholder = title_slide.shapes.title
+    subtitle_placeholder = title_slide.placeholders[1]
+    
+    # Set title
+    title_text = title if title else "Presentation Summary"
+    title_placeholder.text = title_text
+    
+    # Set subtitle based on goal and audience
+    subtitle_text = ""
     if goal:
-        title_shape.text += f" - Goal: {goal}"  # Include the goal in the title
-    logger.info(f"Summary content: {summary}")
-
-    # Only add a brief introduction to the first slide
-    content_shape = slide.placeholders[1]
-    content_shape.text = "This presentation summarizes the key points."
-
-    # Call add_multiple_slides to add more slides based on the summary
-    add_multiple_slides(prs, summary)  # Add detailed slides after the first slide
-
-    # Customize the presentation based on the audience
+        subtitle_text += f"Goal: {goal}"
     if audience:
-        if 'students' in audience:
-            # Add specific slides or content for students
-            pass  # Implement specific logic for students
-        elif 'professionals' in audience:
-            # Add specific slides or content for professionals
-            pass  # Implement specific logic for professionals
-        elif 'researchers' in audience:
-            # Add specific slides or content for researchers
-            pass  # Implement specific logic for researchers
-        elif 'entrepreneurs' in audience:
-            # Add specific slides or content for entrepreneurs
-            pass  # Implement specific logic for entrepreneurs
-        elif 'general' in audience:
-            # Add specific slides or content for general audience
-            pass  # Implement specific logic for general audience
-
+        if subtitle_text:
+            subtitle_text += " | "
+        subtitle_text += f"Audience: {audience}"
+    
+    subtitle_placeholder.text = subtitle_text if subtitle_text else "Generated Presentation"
+    
+    # Apply font to title slide
+    for shape in title_slide.shapes:
+        if hasattr(shape, "text_frame"):
+            for paragraph in shape.text_frame.paragraphs:
+                for run in paragraph.runs:
+                    run.font.name = font_name
+    
+    # If specific number of slides requested, adjust content accordingly
+    if num_slides and num_slides > 0:
+        # Add content slides based on requested number
+        add_content_slides(prs, summary, num_slides, font_name)
+    else:
+        # Add content slides based on content length
+        add_multiple_slides(prs, summary, font_name)
+    
     try:
         prs.save(output_path)
         logger.info(f"PowerPoint saved to {output_path}.")
+        return True
     except Exception as e:
         logger.error(f"Error saving PowerPoint: {str(e)}")
+        return False
+
+def add_content_slides(prs, summary, num_slides, font_name='Calibri'):
+    """Add a specific number of slides distributing the content evenly"""
+    # Remove title slide from count since we already created it
+    content_slides = max(1, num_slides - 1)
+    
+    # Split the summary text into roughly equal parts
+    words = summary.split()
+    if not words:
+        # If no content, add a single empty slide
+        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        slide.shapes.title.text = "Summary"
+        slide.placeholders[1].text = "No content available."
+        return
+    
+    words_per_slide = max(1, len(words) // content_slides)
+    
+    # Create the content slides
+    for i in range(content_slides):
+        start_idx = i * words_per_slide
+        end_idx = min(start_idx + words_per_slide, len(words))
+        
+        # If this is the last slide, include all remaining words
+        if i == content_slides - 1:
+            end_idx = len(words)
+        
+        slide_content = ' '.join(words[start_idx:end_idx])
+        
+        # Add the slide
+        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        slide.shapes.title.text = f"Part {i+1}"
+        content_shape = slide.placeholders[1]
+        content_shape.text = slide_content
+        
+        # Apply font
+        for shape in slide.shapes:
+            if hasattr(shape, "text_frame"):
+                for paragraph in shape.text_frame.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.name = font_name
 
 def add_multiple_slides(prs, summary, font_name='Calibri'):
-    # Split the summary into individual words
-    words = summary.split()
-    max_words_per_line = 6
-    max_lines_per_slide = 6
-    words_per_slide = max_words_per_line * max_lines_per_slide  # 36 words per slide
-
-    # Process the words in chunks of 36
-    for i in range(0, len(words), words_per_slide):
-        chunk = words[i:i + words_per_slide]
-        lines = []
-        # For each chunk, create lines of up to 6 words
-        for j in range(0, len(chunk), max_words_per_line):
-            line = ' '.join(chunk[j:j + max_words_per_line])
-            lines.append(line)
-        # Join lines to form slide content
-        slide_content = "\n".join(lines)
-
-        slide_layout = prs.slide_layouts[1]
-        slide = prs.slides.add_slide(slide_layout)
-
-        slide.shapes.title.text = f"Slide {i // words_per_slide + 1}"
-        slide.placeholders[1].text = slide_content
-
-# Create a PowerPoint presentation customized based on the target audience
-def create_ppt_with_audience(audience_list: list) -> io.BytesIO:
-    prs = Presentation()
+    """Add multiple slides based on content length"""
+    # Split the summary into paragraphs
+    paragraphs = summary.split('\n')
     
-    # Create title slide
-    slide_layout = prs.slide_layouts[0]
-    slide = prs.slides.add_slide(slide_layout)
-    title = slide.shapes.title
-    subtitle = slide.placeholders[1]
-    title.text = "Presentation"
+    # Group paragraphs into slides (roughly 2-3 paragraphs per slide)
+    slides_content = []
+    current_slide = []
+    current_length = 0
     
-    # Determine a default subtitle
-    custom_subtitle = "Customized Presentation"
-    if 'students' in audience_list:
-        custom_subtitle = TARGET_AUDIENCE_OPTIONS['students']
-        # Add multiple slides for students
-        slide2 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide2.shapes.title.text = "Study Tips"
-        slide2.placeholders[1].text = "Effective study habits and time management tips."
-        
-        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide3.shapes.title.text = "Learning Strategies"
-        slide3.placeholders[1].text = "Active learning and critical thinking techniques."
-        
-    elif 'professionals' in audience_list:
-        custom_subtitle = TARGET_AUDIENCE_OPTIONS['professionals']
-        # Add multiple slides for professionals
-        slide2 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide2.shapes.title.text = "Professional Insights"
-        slide2.placeholders[1].text = "Focus on productivity and career growth strategies."
-        
-        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide3.shapes.title.text = "Networking Tips"
-        slide3.placeholders[1].text = "Building professional relationships and connections."
-        
-    elif 'researchers' in audience_list:
-        custom_subtitle = TARGET_AUDIENCE_OPTIONS['researchers']
-        # Add multiple slides for researchers
-        slide2 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide2.shapes.title.text = "Research Findings"
-        slide2.placeholders[1].text = "Latest data and detailed analysis."
-        
-        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide3.shapes.title.text = "Methodology"
-        slide3.placeholders[1].text = "Research design and data collection techniques."
-        
-    elif 'entrepreneurs' in audience_list:
-        custom_subtitle = TARGET_AUDIENCE_OPTIONS['entrepreneurs']
-        # Add multiple slides for entrepreneurs
-        slide2 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide2.shapes.title.text = "Entrepreneurial Strategies"
-        slide2.placeholders[1].text = "Innovative ideas and market insights."
-        
-        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide3.shapes.title.text = "Business Planning"
-        slide3.placeholders[1].text = "Developing effective business plans and strategies."
-        
-    elif 'general' in audience_list:
-        custom_subtitle = TARGET_AUDIENCE_OPTIONS['general']
-        # Add multiple slides for general audience
-        slide2 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide2.shapes.title.text = "Overview"
-        slide2.placeholders[1].text = "Key points and main takeaways."
-        
-        slide3 = prs.slides.add_slide(prs.slide_layouts[1])
-        slide3.shapes.title.text = "Conclusion"
-        slide3.placeholders[1].text = "Summary and final thoughts."
+    for para in paragraphs:
+        if para.strip():  # Skip empty paragraphs
+            # If current slide is getting too long, start a new one
+            if current_length > 300 or len(current_slide) >= 3:
+                slides_content.append('\n\n'.join(current_slide))
+                current_slide = [para]
+                current_length = len(para)
+            else:
+                current_slide.append(para)
+                current_length += len(para)
     
-    subtitle.text = f"Target Audience: {custom_subtitle}"
-
-    # Save presentation to a BytesIO stream
-    ppt_stream = io.BytesIO()
-    prs.save(ppt_stream)
-    ppt_stream.seek(0)
-    return ppt_stream
-
-@app.route('/target-audience', methods=['GET', 'POST'])
-def target_audience():
-    if request.method == 'POST':
-        selected_audience = request.form.getlist('audience')
-        if not selected_audience or len(selected_audience) == 0:
-            flash("Please select at least one target audience.")
-            return redirect(url_for('target_audience'))
-        
-        ppt_file = create_ppt_with_audience(selected_audience)
-        return send_file(
-            ppt_file,
-            as_attachment=True,
-            attachment_filename="presentation.pptx",
-            mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-        )
+    # Add the last slide if not empty
+    if current_slide:
+        slides_content.append('\n\n'.join(current_slide))
     
-    return render_template('target_audience.html', options=TARGET_AUDIENCE_OPTIONS)
+    # If no content was processed, add a single slide
+    if not slides_content:
+        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        slide.shapes.title.text = "Summary"
+        slide.placeholders[1].text = "No content available."
+        return
+    
+    # Create slides with the grouped content
+    for i, content in enumerate(slides_content):
+        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        slide.shapes.title.text = f"Part {i+1}"
+        content_shape = slide.placeholders[1]
+        content_shape.text = content
+        
+        # Apply font
+        for shape in slide.shapes:
+            if hasattr(shape, "text_frame"):
+                for paragraph in shape.text_frame.paragraphs:
+                    for run in paragraph.runs:
+                        run.font.name = font_name
 
-# Route for home page
-@app.route('/summarize', methods=['POST'])
-def summarize():
-    text = request.form.get('text', '').strip()
-    goal = request.form.get('goal', '').strip()
-    target_audience = request.form.get('audience', '').strip()
+@app.route('/', methods=['GET'])
+def index():
+    """Render the initial page with file type selection"""
+    return render_template('index.html')
+
+@app.route('/setup', methods=['POST'])
+def setup():
+    """Handle the file type selection and render the form"""
+    file_type = request.form.get('file_type')
+    if file_type not in ['pdf', 'docx']:
+        flash("Please select a valid file type.")
+        return redirect(url_for('index'))
+    
+    session['file_type'] = file_type
+    return render_template(
+        'setup_form.html', 
+        file_type=file_type,
+        audience_options=TARGET_AUDIENCE_OPTIONS,
+        font_options=FONT_OPTIONS
+    )
+
+@app.route('/process', methods=['POST'])
+def process():
+    """Process the uploaded file and form data"""
+    # Get form data
+    title = request.form.get('title', 'Presentation')
+    audience = request.form.get('audience', 'general')
+    goal = request.form.get('goal', '')
+    font_name = request.form.get('font', 'Calibri')
+    file_type = session.get('file_type', 'pdf')
+    
+    # Check if file was uploaded
+    if 'file' not in request.files or request.files['file'].filename == '':
+        flash("Please upload a file.")
+        return redirect(url_for('setup'))
+    
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    
+    # Check file extension
+    ext = os.path.splitext(filename)[1].lower()
+    expected_ext = '.pdf' if file_type == 'pdf' else '.docx'
+    
+    if ext != expected_ext:
+        flash(f"Please upload a {file_type.upper()} file. You selected {file_type} but uploaded a file with extension {ext}.")
+        return redirect(url_for('setup'))
+    
+    # Save the file
+    upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(upload_path)
+    
+    # Extract text from the file
+    if file_type == 'pdf':
+        text = extract_text_from_pdf(upload_path)
+    else:  # docx
+        text = extract_text_from_docx(upload_path)
     
     if not text:
-        flash("Please enter text to summarize.")
-        return redirect(url_for('index'))
-
-    summary = summarize_text(text, goal=goal, audience=target_audience)
-
-    return render_template('summary.html', summary=summary)
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        if 'datafile' not in request.files or request.files['datafile'].filename == '':
-            return "No file part", 400
-        file = request.files['datafile']
-        if file.filename == '':
-            return "No selected file", 400
-        
-        filename = secure_filename(file.filename)
-        title = os.path.splitext(filename)[0]  # Extract title from filename
-
-        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(upload_path)
-
-        presentation_goal = request.form.get('goal')  # Retrieve the goal input from the form
-
-        # Determine file type        
-        ext = os.path.splitext(filename)[1].lower()
-        if ext == '.pdf' or ext == '.docx':
-            text = extract_text_from_pdf(upload_path)
-        elif ext == '.docx':
-            text = extract_text_from_docx(upload_path)
-        else:
-            return "Unsupported file type. Please upload a PDF or DOCX file.", 400
-
-        if text:
-            summary = summarize_text(text, goal=presentation_goal, audience=request.form.getlist('audience'))  # Pass goal and audience to summarize_text
-        else:
-            return "Error processing the file.", 400
-
-        ppt_path = os.path.join(app.config['OUTPUT_FOLDER'], 'summary_presentation.pptx')        
-        create_ppt(summary, ppt_path, goal=presentation_goal, audience=request.form.getlist('audience'))  # Pass the presentation goal and audience to create_ppt
-        if not summary:
-            flash("Error: Summary could not be generated.")
-            return redirect(url_for('index'))
-
-        return send_file(ppt_path, as_attachment=True)  # Send the generated PPT back to the user
-
-    templates = get_available_templates()
-    return render_template('index.html', templates=templates)  # Pass templates to the index.html
+        flash(f"Error: Could not extract text from the {file_type.upper()} file.")
+        return redirect(url_for('setup'))
     
-    # Ensure that the templates exist
-    if not os.path.exists('templates/target_audience.html') or not os.path.exists('templates/index.html'): 
-        logger.error("Required template files are missing.")
-        return "Required template files are missing.", 500
+    # Summarize the text
+    summary = summarize_text(text, goal=goal, audience=audience)
+    
+    # Estimate number of slides
+    estimated_slides = estimate_slides(summary)
+    
+    # Save data in session for later use
+    session['summary'] = summary
+    session['title'] = title
+    session['audience'] = audience
+    session['goal'] = goal
+    session['font_name'] = font_name
+    session['estimated_slides'] = estimated_slides
+    
+    # Show confirmation page
+    return render_template('confirm.html', estimated_slides=estimated_slides)
 
-        logger.error("Required template files are missing.")
+@app.route('/confirm', methods=['POST'])
+def confirm():
+    """Handle slide count confirmation and generate the final PPT"""
+    response = request.form.get('response', '').lower()
+    
+    # Get saved data from session
+    summary = session.get('summary', '')
+    title = session.get('title', 'Presentation')
+    audience = session.get('audience', 'general')
+    goal = session.get('goal', '')
+    font_name = session.get('font_name', 'Calibri')
+    estimated_slides = session.get('estimated_slides', 5)
+    
+    if not summary:
+        flash("Session expired. Please upload your file again.")
+        return redirect(url_for('index'))
+    
+    num_slides = None  # Default to auto-detect
+    
+    if response == 'no':
+        # User wants custom slide count
+        custom_slides = request.form.get('custom_slides', '')
+        try:
+            num_slides = int(custom_slides)
+            if num_slides <= 0:
+                raise ValueError("Slide count must be positive")
+        except ValueError:
+            flash("Please enter a valid number of slides.")
+            return render_template('confirm.html', estimated_slides=estimated_slides)
+    
+    logger.info("Generating the PowerPoint presentation.")
+    # Generate the PPT
+
+    output_filename = f"{secure_filename(title)}.pptx"
+    output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+    
+    success = create_ppt(
+        summary, 
+        output_path, 
+        title=title, 
+        goal=goal, 
+        audience=audience, 
+        font_name=font_name,
+        num_slides=num_slides
+    )
+    
+    if not success:
+        logger.error("Failed to generate the PowerPoint presentation.")
+
+        flash("Error generating the presentation. Please try again.")
+        return redirect(url_for('index'))
+    
+    # Clear session data
+    for key in ['summary', 'title', 'audience', 'goal', 'font_name', 'estimated_slides']:
+        if key in session:
+            session.pop(key)
+    
+    # Send the file
+    logger.info(f"Sending the PowerPoint file: {output_filename}")
+    return send_file(
+
+        output_path,
+        as_attachment=True,
+        download_name=output_filename,
+        mimetype="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    )
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    """Handle file too large error"""
+    flash("The file you uploaded is too large. Please upload a file smaller than 16MB.")
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', debug=True)
