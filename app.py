@@ -1,3 +1,4 @@
+import textwrap
 import os
 import io
 import logging
@@ -6,7 +7,8 @@ from werkzeug.utils import secure_filename
 from PyPDF2 import PdfReader
 import docx
 from pptx import Presentation
-from pptx.util import Inches
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
 import google.generativeai as genai
 
 from tools.templates import get_available_templates
@@ -61,22 +63,25 @@ def summarize_text(text, goal=None, audience=None):
         
     genai.configure(api_key=api_key)  # Configure the API with the retrieved key
 
-
-
     try:
         genai.configure(api_key="AIzaSyATGHln42rKoibkMUByJp3cPYpO5322zUs")
         model = genai.GenerativeModel("gemini-1.5-flash")
 
-        prompt = f"Please provide a concise summary of the following text:\n\n{text}"
+        # Ensure goal and audience are not None or empty
+        goal_text = goal if goal else "General goal"
+        audience_text = audience if audience else "General audience"
+
+        prompt = f"Please provide a concise summary of the following text. " \
+                  f"The goal of this presentation is: {goal_text}. " \
+                  f"The target audience is: {audience_text}. " \
+                  f"Text:\n\n{text}"
         response = model.generate_content(prompt)
         return response.text if response and response.text else "Summary not generated."
     except Exception as e:
         return f"Error during summarization: {str(e)}"
 
-
 # Create a PowerPoint file with the summary
 def create_ppt(summary, output_path, goal=None, audience=None):
-
     prs = Presentation()
     slide_layout = prs.slide_layouts[1]  # Title and Content layout
     slide = prs.slides.add_slide(slide_layout)
@@ -87,14 +92,13 @@ def create_ppt(summary, output_path, goal=None, audience=None):
     if goal:
         title_shape.text += f" - Goal: {goal}"  # Include the goal in the title
     logger.info(f"Summary content: {summary}")
-    if len(slide.placeholders) > 1:
-        content_shape = slide.placeholders[1]
-        content_shape.text = summary
-    else:
-        left = top = Inches(1)
-        width = height = Inches(8)
-        textbox = slide.shapes.add_textbox(left, top, width, height)
-        textbox.text = summary
+
+    # Only add a brief introduction to the first slide
+    content_shape = slide.placeholders[1]
+    content_shape.text = "This presentation summarizes the key points."
+
+    # Call add_multiple_slides to add more slides based on the summary
+    add_multiple_slides(prs, summary)  # Add detailed slides after the first slide
 
     # Customize the presentation based on the audience
     if audience:
@@ -120,6 +124,29 @@ def create_ppt(summary, output_path, goal=None, audience=None):
     except Exception as e:
         logger.error(f"Error saving PowerPoint: {str(e)}")
 
+def add_multiple_slides(prs, summary, font_name='Calibri'):
+    # Split the summary into individual words
+    words = summary.split()
+    max_words_per_line = 6
+    max_lines_per_slide = 6
+    words_per_slide = max_words_per_line * max_lines_per_slide  # 36 words per slide
+
+    # Process the words in chunks of 36
+    for i in range(0, len(words), words_per_slide):
+        chunk = words[i:i + words_per_slide]
+        lines = []
+        # For each chunk, create lines of up to 6 words
+        for j in range(0, len(chunk), max_words_per_line):
+            line = ' '.join(chunk[j:j + max_words_per_line])
+            lines.append(line)
+        # Join lines to form slide content
+        slide_content = "\n".join(lines)
+
+        slide_layout = prs.slide_layouts[1]
+        slide = prs.slides.add_slide(slide_layout)
+
+        slide.shapes.title.text = f"Slide {i // words_per_slide + 1}"
+        slide.placeholders[1].text = slide_content
 
 # Create a PowerPoint presentation customized based on the target audience
 def create_ppt_with_audience(audience_list: list) -> io.BytesIO:
@@ -191,7 +218,6 @@ def create_ppt_with_audience(audience_list: list) -> io.BytesIO:
     
     subtitle.text = f"Target Audience: {custom_subtitle}"
 
-    
     # Save presentation to a BytesIO stream
     ppt_stream = io.BytesIO()
     prs.save(ppt_stream)
@@ -202,7 +228,7 @@ def create_ppt_with_audience(audience_list: list) -> io.BytesIO:
 def target_audience():
     if request.method == 'POST':
         selected_audience = request.form.getlist('audience')
-        if not selected_audience:
+        if not selected_audience or len(selected_audience) == 0:
             flash("Please select at least one target audience.")
             return redirect(url_for('target_audience'))
         
@@ -227,22 +253,22 @@ def summarize():
         flash("Please enter text to summarize.")
         return redirect(url_for('index'))
 
-    summary = summarize_text(text, goal, target_audience)
+    summary = summarize_text(text, goal=goal, audience=target_audience)
+
     return render_template('summary.html', summary=summary)
 
 @app.route('/', methods=['GET', 'POST'])
-
 def index():
     if request.method == 'POST':
         if 'datafile' not in request.files or request.files['datafile'].filename == '':
-
-
             return "No file part", 400
         file = request.files['datafile']
         if file.filename == '':
             return "No selected file", 400
         
         filename = secure_filename(file.filename)
+        title = os.path.splitext(filename)[0]  # Extract title from filename
+
         upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(upload_path)
 
@@ -251,7 +277,6 @@ def index():
         # Determine file type        
         ext = os.path.splitext(filename)[1].lower()
         if ext == '.pdf' or ext == '.docx':
-
             text = extract_text_from_pdf(upload_path)
         elif ext == '.docx':
             text = extract_text_from_docx(upload_path)
@@ -260,23 +285,26 @@ def index():
 
         if text:
             summary = summarize_text(text, goal=presentation_goal, audience=request.form.getlist('audience'))  # Pass goal and audience to summarize_text
-
         else:
             return "Error processing the file.", 400
 
         ppt_path = os.path.join(app.config['OUTPUT_FOLDER'], 'summary_presentation.pptx')        
         create_ppt(summary, ppt_path, goal=presentation_goal, audience=request.form.getlist('audience'))  # Pass the presentation goal and audience to create_ppt
+        if not summary:
+            flash("Error: Summary could not be generated.")
+            return redirect(url_for('index'))
 
-        
         return send_file(ppt_path, as_attachment=True)  # Send the generated PPT back to the user
 
     templates = get_available_templates()
     return render_template('index.html', templates=templates)  # Pass templates to the index.html
     
     # Ensure that the templates exist
-    if not os.path.exists('templates/target_audience.html') or not os.path.exists('templates/index.html'):
+    if not os.path.exists('templates/target_audience.html') or not os.path.exists('templates/index.html'): 
+        logger.error("Required template files are missing.")
+        return "Required template files are missing.", 500
+
         logger.error("Required template files are missing.")
 
-
 if __name__ == '__main__':
-  app.run(host='127.0.0.1', debug=True)
+    app.run(host='127.0.0.1', debug=True)
