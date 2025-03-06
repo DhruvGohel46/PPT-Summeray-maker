@@ -81,17 +81,6 @@
     <div class="container">
         <h1 class="text-center">PowerPoint Summary Maker</h1>
         
-        <!-- Flash messages -->
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-        <div class="alert alert-danger">
-            {% for message in messages %}
-            {{ message }}
-            {% endfor %}
-        </div>
-        {% endif %}
-        {% endwith %}
-        
 <form id="pptForm" action="{{ url_for('process') }}" method="POST" enctype="multipart/form-data">
 
             <!-- Step 1: File Type Selection -->
