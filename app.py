@@ -1,10 +1,9 @@
 import os
-import io
+import io 
 import logging
 from flask import Flask, request, send_file, render_template, redirect, url_for, flash, jsonify, session
 from werkzeug.utils import secure_filename
 from PyPDF2 import PdfReader
-
 import docx
 from pptx import Presentation
 from pptx.util import Inches, Pt
@@ -68,7 +67,6 @@ def extract_text_from_pdf(pdf_path):
         logger.error(f"Failed to read PDF file: {str(e)}")
         logger.info("Request method: %s", request.method)
         logger.info("Request data: %s", request.form)
-
         return None
 
 # Function to extract text from a DOCX
@@ -83,7 +81,6 @@ def extract_text_from_docx(docx_path):
         logger.error(f"Failed to read DOCX file: {str(e)}")
         logger.info("Request method: %s", request.method)
         logger.info("Request data: %s", request.form)
-
         return None
 
 # Summarize text using Google's Gemini model
@@ -102,66 +99,254 @@ def summarize_text(text, goal=None, audience=None, num_slides=None):
         # Ensure goal and audience are not None or empty
         goal_text = goal if goal else "General goal"
         audience_text = audience if audience else "General audience"
-        slides_text = f" Please create content for {num_slides} slides." if num_slides else ""
+        slides_count = f" Create exactly {num_slides} slides." if num_slides else " Create around 5-7 slides."
 
-        prompt = f"Please provide a concise summary of the following text. " \
-                f"The goal of this presentation is: {goal_text}. " \
-                f"The target audience is: {audience_text}.{slides_text} " \
-                f"Text:\n\n{text}"
+        # Updated prompt to ensure proper formatting with concise bullet points
+        prompt = f"""Please summarize the following text into a structured PowerPoint presentation format.
+
+Requirements:
+- The goal of this presentation is: {goal_text}
+- The target audience is: {audience_text}{slides_count}
+- IMPORTANT: Each slide MUST start with 'Slide X Title: [Title]' where X is the slide number
+- IMPORTANT: Each slide MUST have EXACTLY 5 bullet points - no more, no less
+- IMPORTANT: Each bullet point MUST start with a dash '-'
+- CRUCIAL: Keep each bullet point VERY concise - ideally 60 characters or less, maximum 80 characters
+- Use short phrases instead of complete sentences where possible
+- Avoid long, wordy explanations in bullet points
+- Prefer keywords and key phrases that convey the essential information
+- Do not include any text that is not part of a slide title or bullet point
+
+Example format (exactly follow this pattern):
+Slide 1 Title: Introduction
+- Main topic: [concise description]
+- Key audience benefit
+- Core problem addressed
+- Solution overview
+- Expected outcomes
+
+Slide 2 Title: Key Findings
+- Finding 1: [brief result]
+- Finding 2: [brief result]
+- Primary data point: [specific number/stat]
+- Secondary observation
+- Implications for stakeholders
+
+Text to summarize:
+{text}"""
         
+        logger.info("Sending prompt to Gemini API")
         response = model.generate_content(prompt)
-        return response.text if response and response.text else "Summary not generated."
+        summary = response.text if response and response.text else "Summary not generated."
+        logger.info(f"Received summary from Gemini API (first 100 chars): {summary[:100]}...")
+        return summary
     except Exception as e:
         logger.error(f"Error during summarization: {str(e)}")
         logger.info("Request method: %s", request.method)
         logger.info("Request data: %s", request.form)
-
         return f"Error during summarization: {str(e)}"
-
-# Estimate number of slides needed for a summary
+# Function to estimate the number of slides based on the summary
 def estimate_slides(summary):
-    # Simple estimation: about 30-40 words per slide
-    words = summary.split()
-    return max(1, len(words) // 35)
 
-# Create a PowerPoint file with the summary
+    # Count the number of slide titles in the structured summary
+    lines = summary.strip().split('\n')
+    slide_count = 0
+    
+    for line in lines:
+        if line.startswith('Slide') and 'Title:' in line:
+            slide_count += 1
+    
+    logger.info(f"Estimated {slide_count} slides from summary")
+    # Return at least 1 slide
+    return max(1, slide_count)
+
+# Parse the structured summary into a list of slides with titles and bullet points
+def parse_structured_summary(summary):
+    slides = []
+    current_slide = None
+    
+    # Log summary for debugging
+    logger.info(f"Parsing summary with length: {len(summary)}")
+    
+    # Split the summary into lines
+    lines = summary.strip().split('\n')
+    logger.info(f"Found {len(lines)} lines in summary")
+    
+    for line_num, line in enumerate(lines):
+        line = line.strip()
+        if not line:
+            continue
+        
+        # Log each line for debugging
+        logger.info(f"Processing line {line_num}: {line[:50]}...")
+        
+        # Check if this line is a slide title
+        if line.startswith('Slide') and 'Title:' in line:
+            logger.info(f"Found slide title: {line}")
+            # If we were already processing a slide, add it to our list
+            if current_slide:
+                slides.append(current_slide)
+                logger.info(f"Added slide: {current_slide['title']} with {len(current_slide['bullets'])} bullets")
+            
+            # Extract the title text after the "Slide X Title:" prefix
+            title_parts = line.split('Title:', 1)
+            title = title_parts[1].strip() if len(title_parts) > 1 else "Slide"
+            
+            # Start a new slide
+            current_slide = {
+                'title': title,
+                'bullets': []
+            }
+        
+        # Check if this line is a bullet point
+        elif line.startswith('-') and current_slide:
+            # Add this bullet point to the current slide
+            bullet_text = line[1:].strip()  # Remove the dash and trim whitespace
+            if bullet_text:  # Only add non-empty bullet points
+                current_slide['bullets'].append(bullet_text)
+                logger.info(f"Added bullet: {bullet_text[:30]}...")
+        
+        # Special handling for lines that should be bullets but don't start with dash
+        elif current_slide and not line.startswith('Slide'):
+            # This might be a continuation of a bullet point or a malformatted bullet
+            logger.info(f"Found text that might be a bullet: {line[:30]}...")
+            # If it starts with a bullet-like character, treat as a new bullet
+            if line.startswith('•') or line.startswith('*'):
+                bullet_text = line[1:].strip()
+                if bullet_text:
+                    current_slide['bullets'].append(bullet_text)
+                    logger.info(f"Added alternative bullet: {bullet_text[:30]}...")
+    
+    # Don't forget to add the last slide
+    if current_slide:
+        slides.append(current_slide)
+        logger.info(f"Added final slide: {current_slide['title']} with {len(current_slide['bullets'])} bullets")
+    
+    logger.info(f"Total slides parsed: {len(slides)}")
+    return slides
+
+# Create a PowerPoint file with the structured summary
 def create_ppt(summary, output_path, title=None, goal=None, audience=None, font_name='Calibri', num_slides=None):
     prs = Presentation()
     
     # Title slide
-    title_slide = prs.slides.add_slide(prs.slide_layouts[0])
-    title_placeholder = title_slide.shapes.title
-    subtitle_placeholder = title_slide.placeholders[1]
+    title_slide_layout = prs.slide_layouts[0]
+    title_only = prs.slides.add_slide(title_slide_layout)
+    title_placeholder = title_only.shapes.title
     
     # Set title
     title_text = title if title else "Presentation Summary"
     title_placeholder.text = title_text
     
-    # Set subtitle based on goal and audience
-    subtitle_text = ""
-    if goal:
-        subtitle_text += f"Goal: {goal}"
-    if audience:
-        if subtitle_text:
-            subtitle_text += " | "
-        subtitle_text += f"Audience: {audience}"
+    # Remove subtitle box by setting it to empty string if it exists
+    for shape in title_only.shapes:
+        if shape.has_text_frame and shape != title_placeholder:
+            shape.text = ""  # Set to empty instead of trying to remove
     
-    subtitle_placeholder.text = subtitle_text if subtitle_text else "Generated Presentation"
+    # Apply font to title
+    if hasattr(title_placeholder, "text_frame"):
+        for paragraph in title_placeholder.text_frame.paragraphs:
+            for run in paragraph.runs:
+                run.font.name = font_name
+                run.font.size = Pt(50)  # Set title slide Font Size to 50 
+                run.font.bold = True  # Make Title Slide Text Bold 
     
-    # Apply font to title slide
-    for shape in title_slide.shapes:
-        if hasattr(shape, "text_frame"):
-            for paragraph in shape.text_frame.paragraphs:
+    # Parse the structured summary and create slides
+    slides_content = parse_structured_summary(summary)
+    logger.info(f"Creating PowerPoint with {len(slides_content)} slides")
+    
+    # Analyze all content to determine optimal font size that works for all slides
+    # First, gather all bullet points
+    all_bullet_points = []
+    for slide_content in slides_content:
+        bullet_points = slide_content.get('bullets', [])
+        all_bullet_points.extend(bullet_points)
+    
+    # Determine the optimal font size based on the longest text in any slide
+    max_line_length = max([len(point) for point in all_bullet_points if point]) if all_bullet_points else 0
+    
+    # Calculate content font size - adjust these thresholds based on testing
+    # These values ensure text fits within standard slide dimensions
+    if max_line_length > 100:
+        content_font_size = Pt(20)
+    elif max_line_length > 95:
+        content_font_size = Pt(21)
+    elif max_line_length > 90:
+        content_font_size = Pt(22)
+    elif max_line_length > 85:
+        content_font_size = Pt(23)
+    elif max_line_length > 80:
+        content_font_size = Pt(24)
+    elif max_line_length > 75:
+        content_font_size = Pt(25)
+    elif max_line_length > 70:
+        content_font_size = Pt(26)
+    elif max_line_length > 65:
+        content_font_size = Pt(27)
+    elif max_line_length > 60:
+        content_font_size = Pt(28)
+    elif max_line_length > 55:
+        content_font_size = Pt(29)
+    elif max_line_length > 50:
+        content_font_size = Pt(30)
+    else:
+        content_font_size = Pt(32)
+    
+    logger.info(f"Using consistent content font size of {content_font_size.pt} points for all slides")
+    
+    # Create content slides from the parsed structure
+    for slide_content in slides_content:
+        slide_title = slide_content.get('title', 'Slide')
+        bullet_points = slide_content.get('bullets', [])
+        
+        # Skip empty slides
+        if not slide_title and not bullet_points:
+            logger.info("Skipping empty slide")
+            continue
+        
+        # Add a new slide with title and content layout (layout index 1)
+        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        logger.info(f"Added slide with title: {slide_title}")
+        
+        # Set the slide title
+        if slide.shapes.title:
+            title_shape = slide.shapes.title
+            slide.shapes.title.text = slide_title
+            
+            # Apply formatting to title text: bold and 40pt
+            for paragraph in title_shape.text_frame.paragraphs:
                 for run in paragraph.runs:
                     run.font.name = font_name
-    
-    # If specific number of slides requested, adjust content accordingly
-    if num_slides and num_slides > 0:
-        # Add content slides based on requested number
-        add_content_slides(prs, summary, num_slides, font_name)
-    else:
-        # Add content slides based on content length
-        add_multiple_slides(prs, summary, font_name)
+                    run.font.size = Pt(38)
+                    run.font.bold = True
+        
+        # Ensure exactly 5 bullet points
+        if len(bullet_points) < 5:
+            # Add empty bullets to reach 5
+            while len(bullet_points) < 5:
+                bullet_points.append("")
+        elif len(bullet_points) > 5:
+            # Keep only the first 5 bullets
+            bullet_points = bullet_points[:5]
+        
+        # Add bullet points to the content placeholder
+        if len(slide.placeholders) > 1:
+            text_frame = slide.placeholders[1].text_frame
+            text_frame.clear()  # Clear any existing text
+            
+            for i, point in enumerate(bullet_points):
+                if i == 0:
+                    p = text_frame.paragraphs[0]
+                else:
+                    p = text_frame.add_paragraph()
+                p.text = point
+                p.level = 0  # Set to first level bullet
+                
+                # Apply consistent font formatting across all slides
+                for run in p.runs:
+                    run.font.name = font_name
+                    run.font.size = content_font_size  # Use the consistent font size
+                
+                logger.info(f"Added bullet point {i+1}: {point[:30]}...")
     
     try:
         prs.save(output_path)
@@ -170,93 +355,6 @@ def create_ppt(summary, output_path, title=None, goal=None, audience=None, font_
     except Exception as e:
         logger.error(f"Error saving PowerPoint: {str(e)}")
         return False
-
-def add_content_slides(prs, summary, num_slides, font_name='Calibri'):
-    """Add a specific number of slides distributing the content evenly"""
-    # Remove title slide from count since we already created it
-    content_slides = max(1, num_slides - 1)
-    
-    # Split the summary text into roughly equal parts
-    words = summary.split()
-    if not words:
-        # If no content, add a single empty slide
-        slide = prs.slides.add_slide(prs.slide_layouts[1])
-        slide.shapes.title.text = "Summary"
-        slide.placeholders[1].text = "No content available."
-        return
-    
-    words_per_slide = max(1, len(words) // content_slides)
-    
-    # Create the content slides
-    for i in range(content_slides):
-        start_idx = i * words_per_slide
-        end_idx = min(start_idx + words_per_slide, len(words))
-        
-        # If this is the last slide, include all remaining words
-        if i == content_slides - 1:
-            end_idx = len(words)
-        
-        slide_content = ' '.join(words[start_idx:end_idx])
-        
-        # Add the slide
-        slide = prs.slides.add_slide(prs.slide_layouts[1])
-        slide.shapes.title.text = f"Part {i+1}"
-        content_shape = slide.placeholders[1]
-        content_shape.text = slide_content
-        
-        # Apply font
-        for shape in slide.shapes:
-            if hasattr(shape, "text_frame"):
-                for paragraph in shape.text_frame.paragraphs:
-                    for run in paragraph.runs:
-                        run.font.name = font_name
-
-def add_multiple_slides(prs, summary, font_name='Calibri'):
-    """Add multiple slides based on content length"""
-    # Split the summary into paragraphs
-    paragraphs = summary.split('\n')
-    
-    # Group paragraphs into slides (roughly 2-3 paragraphs per slide)
-    slides_content = []
-    current_slide = []
-    current_length = 0
-    
-    for para in paragraphs:
-        if para.strip():  # Skip empty paragraphs
-            # If current slide is getting too long, start a new one
-            if current_length > 300 or len(current_slide) >= 3:
-                slides_content.append('\n\n'.join(current_slide))
-                current_slide = [para]
-                current_length = len(para)
-            else:
-                current_slide.append(para)
-                current_length += len(para)
-    
-    # Add the last slide if not empty
-    if current_slide:
-        slides_content.append('\n\n'.join(current_slide))
-    
-    # If no content was processed, add a single slide
-    if not slides_content:
-        slide = prs.slides.add_slide(prs.slide_layouts[1])
-        slide.shapes.title.text = "Summary"
-        slide.placeholders[1].text = "No content available."
-        return
-    
-    # Create slides with the grouped content
-    for i, content in enumerate(slides_content):
-        slide = prs.slides.add_slide(prs.slide_layouts[1])
-        slide.shapes.title.text = f"Part {i+1}"
-        content_shape = slide.placeholders[1]
-        content_shape.text = content
-        
-        # Apply font
-        for shape in slide.shapes:
-            if hasattr(shape, "text_frame"):
-                for paragraph in shape.text_frame.paragraphs:
-                    for run in paragraph.runs:
-                        run.font.name = font_name
-
 @app.route('/', methods=['GET'])
 def index():
     """Render the initial page with file type selection"""
@@ -277,6 +375,19 @@ def setup():
         audience_options=TARGET_AUDIENCE_OPTIONS,
         font_options=FONT_OPTIONS
     )
+
+def estimate_slides(summary):
+    # Count the number of slide titles in the structured summary
+    lines = summary.strip().split('\n')
+    slide_count = 0
+    
+    for line in lines:
+        if line.startswith('Slide') and 'Title:' in line:
+            slide_count += 1
+    
+    logger.info(f"Estimated {slide_count} slides from summary")
+    # Return at least 1 slide
+    return max(1, slide_count)
 
 @app.route('/process', methods=['POST'])
 def process():
@@ -361,13 +472,20 @@ def confirm():
             num_slides = int(custom_slides)
             if num_slides <= 0:
                 raise ValueError("Slide count must be positive")
+            # Regenerate summary with the desired number of slides
+            logger.info(f"Regenerating summary for {num_slides} slides")
+            text = session.get('original_text', '')
+            if text:
+                summary = summarize_text(text, goal=goal, audience=audience, num_slides=num_slides)
+                session['summary'] = summary
+            else:
+                logger.warning("Original text not found in session, using existing summary")
         except ValueError:
             flash("Please enter a valid number of slides.")
             return render_template('confirm.html', estimated_slides=estimated_slides)
     
     logger.info("Generating the PowerPoint presentation.")
     # Generate the PPT
-
     output_filename = f"{secure_filename(title)}.pptx"
     output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
     
@@ -383,7 +501,6 @@ def confirm():
     
     if not success:
         logger.error("Failed to generate the PowerPoint presentation.")
-
         flash("Error generating the presentation. Please try again.")
         return redirect(url_for('index'))
     
@@ -394,12 +511,10 @@ def confirm():
 
     # Clear session data only after successful download
     session.clear()  
-
     
     # Send the file
     logger.info(f"Sending the PowerPoint file: {output_filename}")
     return send_file(
-
         output_path,
         as_attachment=True,
         download_name=output_filename,
