@@ -66,6 +66,9 @@ def extract_text_from_pdf(pdf_path):
         return text
     except Exception as e:
         logger.error(f"Failed to read PDF file: {str(e)}")
+        logger.info("Request method: %s", request.method)
+        logger.info("Request data: %s", request.form)
+
         return None
 
 # Function to extract text from a DOCX
@@ -78,6 +81,9 @@ def extract_text_from_docx(docx_path):
         return text
     except Exception as e:
         logger.error(f"Failed to read DOCX file: {str(e)}")
+        logger.info("Request method: %s", request.method)
+        logger.info("Request data: %s", request.form)
+
         return None
 
 # Summarize text using Google's Gemini model
@@ -107,6 +113,9 @@ def summarize_text(text, goal=None, audience=None, num_slides=None):
         return response.text if response and response.text else "Summary not generated."
     except Exception as e:
         logger.error(f"Error during summarization: {str(e)}")
+        logger.info("Request method: %s", request.method)
+        logger.info("Request data: %s", request.form)
+
         return f"Error during summarization: {str(e)}"
 
 # Estimate number of slides needed for a summary
@@ -378,10 +387,14 @@ def confirm():
         flash("Error generating the presentation. Please try again.")
         return redirect(url_for('index'))
     
-    # Clear session data
-    for key in ['summary', 'title', 'audience', 'goal', 'font_name', 'estimated_slides']:
-        if key in session:
-            session.pop(key)
+    # Check if the output file exists before sending
+    if not os.path.exists(output_path):
+        flash("Error: The PowerPoint file was not generated.")
+        return redirect(url_for('index'))
+
+    # Clear session data only after successful download
+    session.clear()  
+
     
     # Send the file
     logger.info(f"Sending the PowerPoint file: {output_filename}")
