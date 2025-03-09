@@ -86,12 +86,151 @@
         .hidden {
             display: none;
         }
+        
+         /* Loading Screen Styles */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+        
+        #loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .loading-content {
+            position: relative;
+            width: 300px;
+            height: 350px;
+            perspective: 1000px;
+        }
+        
+        .loading-page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #fff9e6;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transform-origin: left center;
+            transition: transform 0.7s ease;
+        }
+        
+        .loading-page:nth-child(1) {
+            z-index: 3;
+            transform: rotateY(0deg);
+        }
+        
+        .loading-page:nth-child(2) {
+            z-index: 2;
+            transform: rotateY(0deg);
+        }
+        
+        .loading-content:hover .loading-page:nth-child(1) {
+            transform: rotateY(-30deg);
+        }
+        
+        .page-line {
+            width: 70%;
+            height: 12px;
+            background-color: #1a3c4d;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        
+        .page-line:last-child {
+            width: 40%;
+            background-color: #ff9e7d;
+        }
+        
+        .loading-text {
+            position: absolute;
+            bottom: -50px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            bottom: -100px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .doodle {
+            position: absolute;
+            font-size: 12px;
+            color: #888;
+            opacity: 0.5;
+        }
+        
+        .doodle-1 {
+            top: 20px;
+            left: 20px;
+        }
+        
+        .doodle-2 {
+            bottom: 20px;
+            right: 20px;
+        }
+        
     </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
+
+    <!-- Loading Screen Overlay -->
+    <div id="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-page">
+                <span class="doodle doodle-1">✓✓</span>
+                <div class="page-line"></div>
+                <div class="page-line"></div>
+                <div class="page-line"></div>
+                <div class="page-line"></div>
+                <div class="page-line"></div>
+                <span class="doodle doodle-2">✎</span>
+            </div>
+            <div class="loading-page">
+                <div class="page-line"></div>
+                <div class="page-line"></div>
+                <div class="page-line"></div>
+                <div class="page-line"></div>
+            </div>
+            <div class="loading-text">Generating your PowerPoint...</div>
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+    
     <div class="background"></div>
     <div class="container">
         <h1 class="text-center"><a href="file:///C:/Users/Asus/Desktop/Guj%20hackthon/dhruv%20website/index.html">PowerPoint Summary Maker</a></h1>
@@ -539,7 +678,19 @@
             }
         });
         
-        // Validate file type before submission
+         // Show loading screen
+        function showLoadingScreen() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loadingOverlay.classList.add('active');
+            
+            // For demo purposes, you might want to hide it after a few seconds
+            // In production, you'd hide it when the PPT generation is complete
+            setTimeout(function() {
+                document.getElementById('pptForm').submit();
+            }, 5000); // Show loading for 5 seconds before submitting the form
+        }
+        
+        // Validate file and show loading screen
         function validateAndSubmit() {
             const fileInput = document.getElementById('fileUpload');
             const fileTypeExtension = selectedFileType.toLowerCase();
