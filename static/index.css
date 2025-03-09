@@ -43,13 +43,21 @@ body {
     padding-top: 20px;
     padding-bottom: 40px;
     background-color: #f8f9fa;
+    background: url(https://cdn.pixabay.com/photo/2020/11/03/15/32/man-5710164_1280.jpg);
+    background-repeat: no-repeat;
+    background-size: 100%;
+    background-position: center;
+    background-attachment: fixed;
+
+    
 }
 .container {
     max-width: 800px;
     background-color: white;
     padding: 30px;
     border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.337);
+    background-color: rgba(240, 231, 231, 0.752);
 }
 h1 {
     margin-bottom: 30px;

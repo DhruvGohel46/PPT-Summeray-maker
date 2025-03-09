@@ -5,84 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PPT Summary Maker</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            padding-top: 20px;
-            padding-bottom: 40px;
-            background-color: #f8f9fa;
-            background: url(https://cdn.pixabay.com/photo/2020/11/03/15/32/man-5710164_1280.jpg);
-            background-repeat: no-repeat;
-            background-size: 100%;
-            background-position: center;
-            background-attachment: fixed;
-        
-            
-        }
-        .container {
-            max-width: 800px;
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.337);
-            background-color: rgba(240, 231, 231, 0.752);
-        }
-        h1 {
-            margin-bottom: 30px;
-            color: #0d6efd;
-        }
-        .step {
-            display: none;
-            margin-bottom: 20px;
-        }
-        .step.active {
-            display: block;
-        }
-        .font-preview {
-            padding: 10px;
-            margin: 5px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .font-preview.selected {
-            border-color: #0d6efd;
-            background-color: #e7f1ff;
-        }
-        .file-type-selection {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .file-type-btn {
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .file-type-btn:hover {
-            border-color: #0d6efd;
-        }
-        .file-type-btn.selected {
-            border-color: #0d6efd;
-            background-color: #e7f1ff;
-        }
-        .file-type-btn i {
-            font-size: 2rem;
-            margin-bottom: 10px;
-            display: block;
-        }
-        #slide-count-feedback {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 5px;
-            background-color: #e7f1ff;
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
@@ -94,7 +18,7 @@
 
             <!-- Step 1: File Type Selection -->
             <div class="step active" id="step1">
-                <h3>Step 1: Select File Type</h3>
+                <h3>Select File Type</h3>
                 <div class="file-type-selection">
                     <div class="file-type-btn" data-type="pdf" onclick="selectFileType('pdf')">
                         <i class="far fa-file-pdf text-danger"></i>
@@ -113,7 +37,7 @@
             
             <!-- Step 2: Presentation Title -->
             <div class="step" id="step2">
-                <h3>Step 2: Presentation Title</h3>
+                <h3>Presentation Title</h3>
                 <div class="mb-3">
                     <label for="pptTitle" class="form-label">Enter a title for your presentation</label>
                     <input type="text" class="form-control" id="pptTitle" name="title" required>
@@ -126,7 +50,7 @@
             
             <!-- Step 3: Target Audience -->
             <div class="step" id="step3">
-                <h3>Step 3: Target Audience</h3>
+                <h3>Target Audience</h3>
                 <div class="mb-3">
                     <label class="form-label">Select your target audience</label>
                     <select class="form-select" name="audience" required>
@@ -146,7 +70,7 @@
             
             <!-- Step 4: Presentation Goal -->
             <div class="step" id="step4">
-                <h3>Step 4: Presentation Goal</h3>
+                <h3>Presentation Goal</h3>
                 <div class="mb-3">
                     <label for="presentationGoal" class="form-label">What is the goal of your presentation?</label>
                     <textarea class="form-control" id="presentationGoal" name="goal" rows="3" placeholder="e.g., To inform about recent findings, to persuade investors, to educate students..." required></textarea>
@@ -159,7 +83,7 @@
             
             <!-- Step 5: Font Selection -->
             <div class="step" id="step5">
-                <h3>Step 5: Font Style</h3>
+                <h3>Font Style</h3>
                 <div class="mb-3">
                     <label class="form-label">Select a font style for your presentation</label>
                     <div class="row">
@@ -362,7 +286,7 @@
             
             <!-- Step 6: File Upload -->
             <div class="step" id="step6">
-                <h3>Step 6: Upload Your File</h3>
+                <h3>Upload Your File</h3>
                 <div class="mb-3">
                     <label for="fileUpload" class="form-label">Upload your <span id="fileTypeLabel">PDF</span> file</label>
 <input type="file" class="form-control" id="fileUpload" name="file" required>
