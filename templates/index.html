@@ -1,743 +1,968 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PPT Summary Maker</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <style>
-        body {
-            padding-top: 20px;
-            padding-bottom: 40px;
-            background: url(https://e0.pxfuel.com/wallpapers/749/450/desktop-wallpaper-graduation-background-for-powerpoint-templates-ppt.jpg);
-            background-repeat: no-repeat;
-            background-size: 100%;
-            background-position: center;
-            background-attachment: fixed;
-        
-        
-            
+      body {
+        padding-top: 20px;
+        padding-bottom: 40px;
+        background: url(https://e0.pxfuel.com/wallpapers/749/450/desktop-wallpaper-graduation-background-for-powerpoint-templates-ppt.jpg);
+        background-repeat: no-repeat;
+        background-size: 100%;
+        background-position: center;
+        background-attachment: fixed;
+      }
+
+      .container {
+        max-width: 800px;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.337);
+        background-color: rgba(240, 231, 231, 0.479);
+      }
+      .text-center {
+        margin-bottom: 30px;
+        color: #000000;
+      }
+
+      .step {
+        display: none;
+        margin-bottom: 20px;
+      }
+      .step.active {
+        display: block;
+      }
+      .font-preview {
+        padding: 10px;
+        margin: 5px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .font-preview.selected {
+        border-color: #0f5cb4;
+        background-color: #e7f1ff;
+      }
+      .file-type-selection {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+      .file-type-btn {
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .file-type-btn:hover {
+        border-color: #0f5cb4;
+      }
+      .file-type-btn.selected {
+        border-color: #0f5cb4;
+        background-color: #e7f1ff;
+      }
+      .file-type-btn i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        display: block;
+      }
+      #slide-count-feedback {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 5px;
+        background-color: #e7f1ff;
+      }
+      .hidden {
+        display: none;
+      }
+
+      /* Loading Screen Styles */
+      #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease;
+      }
+
+      #loading-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .loading-content {
+        position: relative;
+        width: 300px;
+        height: 350px;
+        perspective: 1000px;
+      }
+
+      .loading-page {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background-color: #fff9e6;
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transform-origin: left center;
+        transition: transform 0.7s ease;
+      }
+
+      .loading-page:nth-child(1) {
+        z-index: 3;
+        transform: rotateY(0deg);
+      }
+
+      .loading-page:nth-child(2) {
+        z-index: 2;
+        transform: rotateY(0deg);
+      }
+
+      .loading-content:hover .loading-page:nth-child(1) {
+        transform: rotateY(-30deg);
+      }
+
+      .page-line {
+        width: 70%;
+        height: 12px;
+        background-color: #1a3c4d;
+        margin: 15px 0;
+        border-radius: 6px;
+      }
+
+      .page-line:last-child {
+        width: 40%;
+        background-color: #ff9e7d;
+      }
+
+      .loading-text {
+        position: absolute;
+        bottom: -50px;
+        color: white;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+      }
+
+      .loading-spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 4px solid white;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        position: absolute;
+        bottom: -100px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
         }
-        
-    
-        .container {
-            max-width: 800px;
-            
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.337);
-            background-color: rgba(240, 231, 231, 0.479);
-            
-    
+        100% {
+          transform: rotate(360deg);
         }
-        .h1{
-            margin-bottom: 30px;
-            color: #0f5cb4;
-        }
-        .step {
-            display: none;
-            margin-bottom: 20px;
-        }
-        .step.active {
-            display: block;
-        }
-        .font-preview {
-            padding: 10px;
-            margin: 5px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .font-preview.selected {
-            border-color: #0f5cb4;
-            background-color: #e7f1ff;
-        }
-        .file-type-selection {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .file-type-btn {
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .file-type-btn:hover {
-            border-color: #0f5cb4;
-        }
-        .file-type-btn.selected {
-            border-color: #0f5cb4;
-            background-color: #e7f1ff;
-        }
-        .file-type-btn i {
-            font-size: 2rem;
-            margin-bottom: 10px;
-            display: block;
-        }
-        #slide-count-feedback {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 5px;
-            background-color: #e7f1ff;
-        }
-        .hidden {
-            display: none;
-        }
-        
-         /* Loading Screen Styles */
-        #loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease;
-        }
-        
-        #loading-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .loading-content {
-            position: relative;
-            width: 300px;
-            height: 350px;
-            perspective: 1000px;
-        }
-        
-        .loading-page {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-color: #fff9e6;
-            border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transform-origin: left center;
-            transition: transform 0.7s ease;
-        }
-        
-        .loading-page:nth-child(1) {
-            z-index: 3;
-            transform: rotateY(0deg);
-        }
-        
-        .loading-page:nth-child(2) {
-            z-index: 2;
-            transform: rotateY(0deg);
-        }
-        
-        .loading-content:hover .loading-page:nth-child(1) {
-            transform: rotateY(-30deg);
-        }
-        
-        .page-line {
-            width: 70%;
-            height: 12px;
-            background-color: #1a3c4d;
-            margin: 15px 0;
-            border-radius: 6px;
-        }
-        
-        .page-line:last-child {
-            width: 40%;
-            background-color: #ff9e7d;
-        }
-        
-        .loading-text {
-            position: absolute;
-            bottom: -50px;
-            color: white;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
-            width: 100%;
-        }
-        
-        .loading-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid white;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            position: absolute;
-            bottom: -100px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .doodle {
-            position: absolute;
-            font-size: 12px;
-            color: #888;
-            opacity: 0.5;
-        }
-        
-        .doodle-1 {
-            top: 20px;
-            left: 20px;
-        }
-        
-        .doodle-2 {
-            bottom: 20px;
-            right: 20px;
-        }
-        
+      }
+
+      .doodle {
+        position: absolute;
+        font-size: 12px;
+        color: #888;
+        opacity: 0.5;
+      }
+
+      .doodle-1 {
+        top: 20px;
+        left: 20px;
+      }
+
+      .doodle-2 {
+        bottom: 20px;
+        right: 20px;
+      }
     </style>
-    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='index.css') }}"
+    />
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-</head>
-<body>
-
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+  </head>
+  <body>
     <!-- Loading Screen Overlay -->
     <div id="loading-overlay">
-        <div class="loading-content">
-            <div class="loading-page">
-                <span class="doodle doodle-1">✓✓</span>
-                <div class="page-line"></div>
-                <div class="page-line"></div>
-                <div class="page-line"></div>
-                <div class="page-line"></div>
-                <div class="page-line"></div>
-                <span class="doodle doodle-2">✎</span>
-            </div>
-            <div class="loading-page">
-                <div class="page-line"></div>
-                <div class="page-line"></div>
-                <div class="page-line"></div>
-                <div class="page-line"></div>
-            </div>
-            <div class="loading-text">Generating your PowerPoint...</div>
-            <div class="loading-spinner"></div>
+      <div class="loading-content">
+        <div class="loading-page">
+          <span class="doodle doodle-1">✓✓</span>
+          <div class="page-line"></div>
+          <div class="page-line"></div>
+          <div class="page-line"></div>
+          <div class="page-line"></div>
+          <div class="page-line"></div>
+          <span class="doodle doodle-2">✎</span>
         </div>
+        <div class="loading-page">
+          <div class="page-line"></div>
+          <div class="page-line"></div>
+          <div class="page-line"></div>
+          <div class="page-line"></div>
+        </div>
+        <div class="loading-text">Generating your PowerPoint...</div>
+        <div class="loading-spinner"></div>
+      </div>
     </div>
-    
+
     <div class="background"></div>
     <div class="container">
-        <h1 class="text-center"><a href="file:///C:/Users/Asus/Desktop/Guj%20hackthon/dhruv%20website/index.html">PowerPoint Summary Maker</a></h1>
-        
-<form id="pptForm" action="{{ url_for('process') }}" method="POST" enctype="multipart/form-data">
+      <h1 class="text-center" style="color: #000000">
+        PowerPoint Summary Maker
+      </h1>
 
-    <br>
-            <!-- Step 1: File Type Selection -->
-            <div class="step active" id="step1">
-                <h3>Select File Type</h3>
-                <div class="file-type-selection">
-                    <div class="file-type-btn" data-type="pdf" onclick="selectFileType('pdf')">
-                        <i class="far fa-file-pdf text-danger"></i>
-                        <span>PDF Document</span>
-                    </div>
-                    <div class="file-type-btn" data-type="docx" onclick="selectFileType('docx')">
-                        <i class="far fa-file-word text-primary"></i>
-                        <span>Word Document</span>
-                    </div>
-                </div>
-                <input type="hidden" name="file_type" id="file_type">
-                <div class="mt-4 text-end">
-                    <button type="button" class="btn btn-primary" onclick="nextStep(1)">Next</button>
-                </div>
+      <form
+        id="pptForm"
+        action="{{ url_for('process') }}"
+        method="POST"
+        enctype="multipart/form-data"
+      >
+        <br />
+        <!-- Step 1: File Type Selection -->
+        <div class="step active" id="step1">
+          <h3>Select File Type</h3>
+          <div class="file-type-selection">
+            <div
+              class="file-type-btn"
+              data-type="pdf"
+              onclick="selectFileType('pdf')"
+            >
+              <i class="far fa-file-pdf text-danger"></i>
+              <span>PDF Document</span>
             </div>
-            
-            <!-- Step 2: Presentation Title -->
-            <div class="step" id="step2">
-                <h3>Presentation Title</h3>
-                <div class="mb-3">
-                    <label for="pptTitle" class="form-label">Enter a title for your presentation</label>
-                    <input type="text" class="form-control" id="pptTitle" name="title" required>
-                </div>
-                <div class="mt-4 d-flex justify-content-between">
-                    <button type="button" class="btn btn-secondary" onclick="prevStep(2)">Previous</button>
-                    <button type="button" class="btn btn-primary" onclick="nextStep(2)">Next</button>
-                </div>
+            <div
+              class="file-type-btn"
+              data-type="docx"
+              onclick="selectFileType('docx')"
+            >
+              <i class="far fa-file-word text-primary"></i>
+              <span>Word Document</span>
             </div>
-            
-            <!-- Step 3: Target Audience -->
-            <div class="step" id="step3">
-                <h3>Target Audience</h3>
-                <div class="mb-3">
-                    <label class="form-label">Select your target audience</label>
-                    <select class="form-select" name="audience" required>
-                        <option value="" selected disabled>Choose your target audience...</option>
-                        <option value="students">Students</option>
-                        <option value="professionals">Professionals</option>
-                        <option value="researchers">Researchers</option>
-                        <option value="entrepreneurs">Entrepreneurs</option>
-                        <option value="general">General Audience</option>
-                    </select>
-                </div>
-                <div class="mt-4 d-flex justify-content-between">
-                    <button type="button" class="btn btn-secondary" onclick="prevStep(3)">Previous</button>
-                    <button type="button" class="btn btn-primary" onclick="nextStep(3)">Next</button>
-                </div>
-            </div>
-            
-            <!-- Step 4: Presentation Goal -->
-            <div class="step" id="step4">
-                <h3>Presentation Goal</h3>
-                <div class="mb-3">
-                    <label for="presentationGoal" class="form-label">What is the goal of your presentation?</label>
-                    <textarea class="form-control" id="presentationGoal" name="goal" rows="3" placeholder="e.g., To inform about recent findings, to persuade investors, to educate students..." required></textarea>
-                </div>
-                <div class="mt-4 d-flex justify-content-between">
-                    <button type="button" class="btn btn-secondary" onclick="prevStep(4)">Previous</button>
-                    <button type="button" class="btn btn-primary" onclick="nextStep(4)">Next</button>
-                </div>
-            </div>
-            
-            <!-- Step 5: Font Selection -->
-            <div class="step" id="step5">
-                <h3>Font Style</h3>
-                <div class="mb-3">
-                    <label class="form-label">Select a font style for your presentation</label>
-                    <div class="row">
-                        <div class="col-md-6" onclick="selectFont('Calibri')">
-                            <div class="font-preview" style="font-family: Calibri, sans-serif;">
-                                <h5>Calibri</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Arial')">
-                            <div class="font-preview" style="font-family: Arial, sans-serif;">
-                                <h5>Arial</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Times New Roman')">
-                            <div class="font-preview" style="font-family: 'Times New Roman', serif;">
-                                <h5>Times New Roman</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Georgia')">
-                            <div class="font-preview" style="font-family: Georgia, serif;">
-                                <h5>Georgia</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Verdana')">
-                            <div class="font-preview" style="font-family: Verdana, sans-serif;">
-                                <h5>Verdana</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Tahoma')">
-                            <div class="font-preview" style="font-family: Tahoma, sans-serif;">
-                                <h5>Tahoma</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Helvetica')">
-                            <div class="font-preview" style="font-family: Helvetica, sans-serif;">
-                                <h5>Helvetica</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Trebuchet MS')">
-                            <div class="font-preview" style="font-family: 'Trebuchet MS', sans-serif;">
-                                <h5>Trebuchet MS</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Garamond')">
-                            <div class="font-preview" style="font-family: Garamond, serif;">
-                                <h5>Garamond</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Century Gothic')">
-                            <div class="font-preview" style="font-family: 'Century Gothic', sans-serif;">
-                                <h5>Century Gothic</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-3">
-                        <button type="button" class="btn btn-outline-primary" id="showMoreFonts">Show More Fonts</button>
-                    </div>
-                    
-                    <div id="moreFonts" class="row mt-3 hidden">
-                        <!-- Additional 20 fonts -->
-                        <div class="col-md-6" onclick="selectFont('Cambria')">
-                            <div class="font-preview" style="font-family: Cambria, serif;">
-                                <h5>Cambria</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Palatino Linotype')">
-                            <div class="font-preview" style="font-family: 'Palatino Linotype', serif;">
-                                <h5>Palatino Linotype</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Book Antiqua')">
-                            <div class="font-preview" style="font-family: 'Book Antiqua', serif;">
-                                <h5>Book Antiqua</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Candara')">
-                            <div class="font-preview" style="font-family: Candara, sans-serif;">
-                                <h5>Candara</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Segoe UI')">
-                            <div class="font-preview" style="font-family: 'Segoe UI', sans-serif;">
-                                <h5>Segoe UI</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Constantia')">
-                            <div class="font-preview" style="font-family: Constantia, serif;">
-                                <h5>Constantia</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Franklin Gothic')">
-                            <div class="font-preview" style="font-family: 'Franklin Gothic', sans-serif;">
-                                <h5>Franklin Gothic</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Corbel')">
-                            <div class="font-preview" style="font-family: Corbel, sans-serif;">
-                                <h5>Corbel</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Lucida Sans')">
-                            <div class="font-preview" style="font-family: 'Lucida Sans', sans-serif;">
-                                <h5>Lucida Sans</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Arial Narrow')">
-                            <div class="font-preview" style="font-family: 'Arial Narrow', sans-serif;">
-                                <h5>Arial Narrow</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Copperplate')">
-                            <div class="font-preview" style="font-family: Copperplate, fantasy;">
-                                <h5>Copperplate</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Gill Sans')">
-                            <div class="font-preview" style="font-family: 'Gill Sans', sans-serif;">
-                                <h5>Gill Sans</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Baskerville')">
-                            <div class="font-preview" style="font-family: Baskerville, serif;">
-                                <h5>Baskerville</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Rockwell')">
-                            <div class="font-preview" style="font-family: Rockwell, serif;">
-                                <h5>Rockwell</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Futura')">
-                            <div class="font-preview" style="font-family: Futura, sans-serif;">
-                                <h5>Futura</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Didot')">
-                            <div class="font-preview" style="font-family: Didot, serif;">
-                                <h5>Didot</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Optima')">
-                            <div class="font-preview" style="font-family: Optima, sans-serif;">
-                                <h5>Optima</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Avenir')">
-                            <div class="font-preview" style="font-family: Avenir, sans-serif;">
-                                <h5>Avenir</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Frutiger')">
-                            <div class="font-preview" style="font-family: Frutiger, sans-serif;">
-                                <h5>Frutiger</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                        <div class="col-md-6" onclick="selectFont('Myriad Pro')">
-                            <div class="font-preview" style="font-family: 'Myriad Pro', sans-serif;">
-                                <h5>Myriad Pro</h5>
-                                <p>This is sample text</p>
-                            </div>
-                        </div>
-                    </div>
-                    <input type="hidden" name="font" id="selectedFont" value="Calibri">
-                </div>
-                <div class="mt-4 d-flex justify-content-between">
-                    <button type="button" class="btn btn-secondary" onclick="prevStep(5)">Previous</button>
-                    <button type="button" class="btn btn-primary" onclick="nextStep(5)">Next</button>
-                </div>
-            </div>
-            
-            <!-- Step 6: File Upload -->
-            <div class="step" id="step6">
-                <h3>Upload Your File</h3>
-                <div class="mb-3">
-                    <label for="fileUpload" class="form-label">Upload your <span id="fileTypeLabel">PDF</span> file</label>
-<input type="file" class="form-control" id="fileUpload" name="file" required>
+          </div>
+          <input type="hidden" name="file_type" id="file_type" />
+          <div class="mt-4 text-end">
+            <button type="button" class="btn btn-primary" onclick="nextStep(1)">
+              Next
+            </button>
+          </div>
+        </div>
 
-                    <div class="form-text" id="fileTypeHelp">Please make sure you upload a <span id="fileTypeRequirement">PDF</span> file as selected in Step 1.</div>
-                </div>
-                <div class="mt-4 d-flex justify-content-between">
-                    <button type="button" class="btn btn-secondary" onclick="prevStep(6)">Previous</button>
-                    <button type="button" class="btn btn-primary" onclick="validateAndSubmit()">Submit</button>
-                </div>
-            </div>
-        </form>
-        
-        <!-- Slide Count Confirmation Modal -->
-        <div class="modal fade" id="slideCountModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Presentation Ready</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>Your presentation will have approximately <span id="slideCount">12</span> slides.</p>
-                        <p>Would you like to proceed with downloading?</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="noDownload">No</button>
-                        <button type="button" class="btn btn-primary" id="yesDownload">Yes</button>
-                    </div>
-                </div>
-            </div>
+        <!-- Step 2: Presentation Title -->
+        <div class="step" id="step2">
+          <h3>Presentation Title</h3>
+          <div class="mb-3">
+            <label for="pptTitle" class="form-label"
+              >Enter a title for your presentation</label
+            >
+            <input
+              type="text"
+              class="form-control"
+              id="pptTitle"
+              name="title"
+              required
+            />
+          </div>
+          <div class="mt-4 d-flex justify-content-between">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="prevStep(2)"
+            >
+              Previous
+            </button>
+            <button type="button" class="btn btn-primary" onclick="nextStep(2)">
+              Next
+            </button>
+          </div>
         </div>
-        
-        <!-- Custom Slide Count Modal -->
-        <div class="modal fade" id="customSlideCountModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Customize Slide Count</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>How many slides would you like in your presentation?</p>
-                        <input type="number" class="form-control" id="customSlideCount" min="1" max="50" value="10">
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="confirmCustomSlides">Confirm & Download</button>
-                    </div>
-                </div>
-            </div>
+
+        <!-- Step 3: Target Audience -->
+        <div class="step" id="step3">
+          <h3>Target Audience</h3>
+          <div class="mb-3">
+            <label class="form-label">Select your target audience</label>
+            <select class="form-select" name="audience" required>
+              <option value="" selected disabled>
+                Choose your target audience...
+              </option>
+              <option value="students">Students</option>
+              <option value="professionals">Professionals</option>
+              <option value="researchers">Researchers</option>
+              <option value="entrepreneurs">Entrepreneurs</option>
+              <option value="general">General Audience</option>
+            </select>
+          </div>
+          <div class="mt-4 d-flex justify-content-between">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="prevStep(3)"
+            >
+              Previous
+            </button>
+            <button type="button" class="btn btn-primary" onclick="nextStep(3)">
+              Next
+            </button>
+          </div>
         </div>
+
+        <!-- Step 4: Presentation Goal -->
+        <div class="step" id="step4">
+          <h3>Presentation Goal</h3>
+          <div class="mb-3">
+            <label for="presentationGoal" class="form-label"
+              >What is the goal of your presentation?</label
+            >
+            <textarea
+              class="form-control"
+              id="presentationGoal"
+              name="goal"
+              rows="3"
+              placeholder="e.g., To inform about recent findings, to persuade investors, to educate students..."
+              required
+            ></textarea>
+          </div>
+          <div class="mt-4 d-flex justify-content-between">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="prevStep(4)"
+            >
+              Previous
+            </button>
+            <button type="button" class="btn btn-primary" onclick="nextStep(4)">
+              Next
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 5: Font Selection -->
+        <div class="step" id="step5">
+          <h3>Font Style</h3>
+          <div class="mb-3">
+            <label class="form-label"
+              >Select a font style for your presentation</label
+            >
+            <div class="row">
+              <div class="col-md-6" onclick="selectFont('Calibri')">
+                <div
+                  class="font-preview"
+                  style="font-family: Calibri, sans-serif"
+                >
+                  <h5>Calibri</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Arial')">
+                <div
+                  class="font-preview"
+                  style="font-family: Arial, sans-serif"
+                >
+                  <h5>Arial</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Times New Roman')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Times New Roman', serif"
+                >
+                  <h5>Times New Roman</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Georgia')">
+                <div class="font-preview" style="font-family: Georgia, serif">
+                  <h5>Georgia</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Verdana')">
+                <div
+                  class="font-preview"
+                  style="font-family: Verdana, sans-serif"
+                >
+                  <h5>Verdana</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Tahoma')">
+                <div
+                  class="font-preview"
+                  style="font-family: Tahoma, sans-serif"
+                >
+                  <h5>Tahoma</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Helvetica')">
+                <div
+                  class="font-preview"
+                  style="font-family: Helvetica, sans-serif"
+                >
+                  <h5>Helvetica</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Trebuchet MS')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Trebuchet MS', sans-serif"
+                >
+                  <h5>Trebuchet MS</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Garamond')">
+                <div class="font-preview" style="font-family: Garamond, serif">
+                  <h5>Garamond</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Century Gothic')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Century Gothic', sans-serif"
+                >
+                  <h5>Century Gothic</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <button
+                type="button"
+                class="btn btn-outline-primary"
+                id="showMoreFonts"
+              >
+                Show More Fonts
+              </button>
+            </div>
+
+            <div id="moreFonts" class="row mt-3 hidden">
+              <!-- Additional 20 fonts -->
+              <div class="col-md-6" onclick="selectFont('Cambria')">
+                <div class="font-preview" style="font-family: Cambria, serif">
+                  <h5>Cambria</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Palatino Linotype')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Palatino Linotype', serif"
+                >
+                  <h5>Palatino Linotype</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Book Antiqua')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Book Antiqua', serif"
+                >
+                  <h5>Book Antiqua</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Candara')">
+                <div
+                  class="font-preview"
+                  style="font-family: Candara, sans-serif"
+                >
+                  <h5>Candara</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Segoe UI')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Segoe UI', sans-serif"
+                >
+                  <h5>Segoe UI</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Constantia')">
+                <div
+                  class="font-preview"
+                  style="font-family: Constantia, serif"
+                >
+                  <h5>Constantia</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Franklin Gothic')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Franklin Gothic', sans-serif"
+                >
+                  <h5>Franklin Gothic</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Corbel')">
+                <div
+                  class="font-preview"
+                  style="font-family: Corbel, sans-serif"
+                >
+                  <h5>Corbel</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Lucida Sans')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Lucida Sans', sans-serif"
+                >
+                  <h5>Lucida Sans</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Arial Narrow')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Arial Narrow', sans-serif"
+                >
+                  <h5>Arial Narrow</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Copperplate')">
+                <div
+                  class="font-preview"
+                  style="font-family: Copperplate, fantasy"
+                >
+                  <h5>Copperplate</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Gill Sans')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Gill Sans', sans-serif"
+                >
+                  <h5>Gill Sans</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Baskerville')">
+                <div
+                  class="font-preview"
+                  style="font-family: Baskerville, serif"
+                >
+                  <h5>Baskerville</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Rockwell')">
+                <div class="font-preview" style="font-family: Rockwell, serif">
+                  <h5>Rockwell</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Futura')">
+                <div
+                  class="font-preview"
+                  style="font-family: Futura, sans-serif"
+                >
+                  <h5>Futura</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Didot')">
+                <div class="font-preview" style="font-family: Didot, serif">
+                  <h5>Didot</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Optima')">
+                <div
+                  class="font-preview"
+                  style="font-family: Optima, sans-serif"
+                >
+                  <h5>Optima</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Avenir')">
+                <div
+                  class="font-preview"
+                  style="font-family: Avenir, sans-serif"
+                >
+                  <h5>Avenir</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Frutiger')">
+                <div
+                  class="font-preview"
+                  style="font-family: Frutiger, sans-serif"
+                >
+                  <h5>Frutiger</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+              <div class="col-md-6" onclick="selectFont('Myriad Pro')">
+                <div
+                  class="font-preview"
+                  style="font-family: 'Myriad Pro', sans-serif"
+                >
+                  <h5>Myriad Pro</h5>
+                  <p>This is sample text</p>
+                </div>
+              </div>
+            </div>
+            <input
+              type="hidden"
+              name="font"
+              id="selectedFont"
+              value="Calibri"
+            />
+          </div>
+          <div class="mt-4 d-flex justify-content-between">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="prevStep(5)"
+            >
+              Previous
+            </button>
+            <button type="button" class="btn btn-primary" onclick="nextStep(5)">
+              Next
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 6: File Upload -->
+        <div class="step" id="step6">
+          <h3>Upload Your File</h3>
+          <div class="mb-3">
+            <label for="fileUpload" class="form-label"
+              >Upload your <span id="fileTypeLabel">PDF</span> file</label
+            >
+            <input
+              type="file"
+              class="form-control"
+              id="fileUpload"
+              name="file"
+              required
+            />
+
+            <div class="form-text" id="fileTypeHelp">
+              Please make sure you upload a
+              <span id="fileTypeRequirement">PDF</span> file as selected in Step
+              1.
+            </div>
+          </div>
+          <div class="mt-4 d-flex justify-content-between">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="prevStep(6)"
+            >
+              Previous
+            </button>     
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="showLoadingScreen(),validateAndSubmit()"
+              id="yesDownload"
+            >
+              Submit
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-md-8">
+            <div class="card">
+              <div class="card-header text-center">
+                <h2>Almost Done!</h2>
+              </div>
+              <div class="card-body text-center">
+                {% with messages = get_flashed_messages() %}
+                  {% if messages %}
+                    {% for message in messages %}
+                      <div class="alert alert-warning">{{ message }}</div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+                
+                <h3 class="mb-4">Your presentation will have</h3>
+                <div class="slide-count mb-4">{{ estimated_slides }} slides</div>
+                <h4 class="mb-4">Would you like to proceed with downloading?</h4>
+                
+                <div class="row justify-content-center">
+                  <div class="col-md-5">
+                    <form id="confirm-form" action="{{ url_for('confirm') }}" method="post">
+                      <input type="hidden" id="response-input" name="response" value="yes">
+                      
+                      <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-check-circle-fill me-2"></i> Yes, Download Now
+                      </button>
+                      
+                      <button type="button" id="no-btn" class="response-btn btn-no w-100" onclick="toggleCustomSlides()">
+                        <i class="bi bi-x-circle-fill me-2"></i>No, I Want to Change
+                      </button>
+                      
+                      <div id="custom-slides-container" class="mt-4">
+                        <div class="form-group">
+                          <label for="custom-slides" class="form-label">How many slides would you like?</label>
+                          <input type="number" class="form-control form-control-lg" id="custom-slides" name="custom_slides" min="1" max="50" value>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let currentStep = 1;
-        const totalSteps = 6;
-        let selectedFileType = '';
-        const slideCountModal = new bootstrap.Modal(document.getElementById('slideCountModal'));
-        const customSlideCountModal = new bootstrap.Modal(document.getElementById('customSlideCountModal'));
-        
-        // Function to go to next step
-        function nextStep(step) {
-            // Validate current step
-            if (!validateStep(step)) {
-                return;
+      let currentStep = 1;
+      const totalSteps = 6;
+      let selectedFileType = "";
+      const slideCountModal = new bootstrap.Modal(
+        document.getElementById("slideCountModal")
+      );
+      const customSlideCountModal = new bootstrap.Modal(
+        document.getElementById("customSlideCountModal")
+      );
+
+      // Function to go to next step
+      function nextStep(step) {
+        // Validate current step
+        if (!validateStep(step)) {
+          return;
+        }
+
+        document.getElementById(`step${step}`).classList.remove("active");
+        document.getElementById(`step${step + 1}`).classList.add("active");
+        currentStep = step + 1;
+
+        // Update file type label in step 6
+        if (currentStep === 6) {
+          updateFileTypeLabels();
+        }
+      }
+
+      // Function to go to previous step
+      function prevStep(step) {
+        document.getElementById(`step${step}`).classList.remove("active");
+        document.getElementById(`step${step - 1}`).classList.add("active");
+        currentStep = step - 1;
+      }
+
+      // Validate each step before proceeding
+      function validateStep(step) {
+        switch (step) {
+          case 1:
+            if (!selectedFileType) {
+              alert("Please select a file type!");
+              return false;
             }
-            
-            document.getElementById(`step${step}`).classList.remove('active');
-            document.getElementById(`step${step+1}`).classList.add('active');
-            currentStep = step + 1;
-            
-            // Update file type label in step 6
-            if (currentStep === 6) {
-                updateFileTypeLabels();
+            return true;
+          case 2:
+            if (!document.getElementById("pptTitle").value.trim()) {
+              alert("Please enter a presentation title!");
+              return false;
             }
-        }
-        
-        // Function to go to previous step
-        function prevStep(step) {
-            document.getElementById(`step${step}`).classList.remove('active');
-            document.getElementById(`step${step-1}`).classList.add('active');
-            currentStep = step - 1;
-        }
-        
-        // Validate each step before proceeding
-        function validateStep(step) {
-            switch(step) {
-                case 1:
-                    if (!selectedFileType) {
-                        alert('Please select a file type!');
-                        return false;
-                    }
-                    return true;
-                case 2:
-                    if (!document.getElementById('pptTitle').value.trim()) {
-                        alert('Please enter a presentation title!');
-                        return false;
-                    }
-                    return true;
-                case 3:
-                    if (!document.querySelector('select[name="audience"]').value) {
-                        alert('Please select a target audience!');
-                        return false;
-                    }
-                    return true;
-                case 4:
-                    if (!document.getElementById('presentationGoal').value.trim()) {
-                        alert('Please enter the presentation goal!');
-                        return false;
-                    }
-                    return true;
-                case 5:
-                    return true; // Font selection has a default value
-                default:
-                    return true;
+            return true;
+          case 3:
+            if (!document.querySelector('select[name="audience"]').value) {
+              alert("Please select a target audience!");
+              return false;
             }
-        }
-        
-        // Select file type
-        function selectFileType(type) {
-            selectedFileType = type;
-            document.getElementById('file_type').value = type;
-            
-            // Update visual selection
-            document.querySelectorAll('.file-type-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            document.querySelector(`.file-type-btn[data-type="${type}"]`).classList.add('selected');
-        }
-        
-        // Update file type labels in step 6
-        function updateFileTypeLabels() {
-            const fileType = selectedFileType.toUpperCase();
-            document.getElementById('fileTypeLabel').textContent = fileType;
-            document.getElementById('fileTypeRequirement').textContent = fileType;
-        }
-        
-        // Select font
-        function selectFont(font) {
-            document.getElementById('selectedFont').value = font;
-            
-            // Update visual selection
-            document.querySelectorAll('.font-preview').forEach(preview => {
-                preview.classList.remove('selected');
-            });
-            
-            // Find the clicked font preview and add selected class
-            const fontPreviews = document.querySelectorAll('.font-preview');
-            for (let preview of fontPreviews) {
-                if (preview.querySelector('h5').textContent === font) {
-                    preview.classList.add('selected');
-                    break;
-                }
+            return true;
+          case 4:
+            if (!document.getElementById("presentationGoal").value.trim()) {
+              alert("Please enter the presentation goal!");
+              return false;
             }
+            return true;
+          case 5:
+            return true; // Font selection has a default value
+          default:
+            return true;
         }
-        
-        // Show more fonts toggle
-        document.getElementById('showMoreFonts').addEventListener('click', function() {
-            const moreFonts = document.getElementById('moreFonts');
-            if (moreFonts.classList.contains('hidden')) {
-                moreFonts.classList.remove('hidden');
-                this.textContent = 'Show Fewer Fonts';
-            } else {
-                moreFonts.classList.add('hidden');
-                this.textContent = 'Show More Fonts';
-            }
+      }
+
+      // Select file type
+      function selectFileType(type) {
+        selectedFileType = type;
+        document.getElementById("file_type").value = type;
+
+        // Update visual selection
+        document.querySelectorAll(".file-type-btn").forEach((btn) => {
+          btn.classList.remove("selected");
         });
-        
-         // Show loading screen
-        function showLoadingScreen() {
-            const loadingOverlay = document.getElementById('loading-overlay');
-            loadingOverlay.classList.add('active');
-            
-            // For demo purposes, you might want to hide it after a few seconds
-            // In production, you'd hide it when the PPT generation is complete
-            setTimeout(function() {
-                document.getElementById('pptForm').submit();
-            }, 5000); // Show loading for 5 seconds before submitting the form
+        document
+          .querySelector(`.file-type-btn[data-type="${type}"]`)
+          .classList.add("selected");
+      }
+
+      // Update file type labels in step 6
+      function updateFileTypeLabels() {
+        const fileType = selectedFileType.toUpperCase();
+        document.getElementById("fileTypeLabel").textContent = fileType;
+        document.getElementById("fileTypeRequirement").textContent = fileType;
+      }
+
+      // Select font
+      function selectFont(font) {
+        document.getElementById("selectedFont").value = font;
+
+        // Update visual selection
+        document.querySelectorAll(".font-preview").forEach((preview) => {
+          preview.classList.remove("selected");
+        });
+
+        // Find the clicked font preview and add selected class
+        const fontPreviews = document.querySelectorAll(".font-preview");
+        for (let preview of fontPreviews) {
+          if (preview.querySelector("h5").textContent === font) {
+            preview.classList.add("selected");
+            break;
+          }
         }
-        
-        // Validate file and show loading screen
-        function validateAndSubmit() {
-            const fileInput = document.getElementById('fileUpload');
-            const fileTypeExtension = selectedFileType.toLowerCase();
-            
-            if (fileInput.files.length === 0) {
-                alert('Please select a file to upload!');
-                return;
-            }
-            
-            const fileName = fileInput.files[0].name;
-            const fileExtension = fileName.split('.').pop().toLowerCase();
-            
-            if (fileExtension !== fileTypeExtension) {
-                alert(`Please upload a ${fileTypeExtension.toUpperCase()} file as selected in Step 1.`);
-                return;
-            }
-            
-            // Show the slide count confirmation modal
-            // In a real implementation, you might want to calculate this based on the file content
-            document.getElementById('slideCount').textContent = Math.floor(Math.random() * 10) + 5; // Random number between 5-15 for demo
-            slideCountModal.show();
+      }
+
+      // Show more fonts toggle
+      document
+        .getElementById("showMoreFonts")
+        .addEventListener("click", function () {
+          const moreFonts = document.getElementById("moreFonts");
+          if (moreFonts.classList.contains("hidden")) {
+            moreFonts.classList.remove("hidden");
+            this.textContent = "Show Fewer Fonts";
+          } else {
+            moreFonts.classList.add("hidden");
+            this.textContent = "Show More Fonts";
+          }
+        });
+
+      // Show loading screen
+      function showLoadingScreen() {
+        const loadingOverlay = document.getElementById("loading-overlay");
+        loadingOverlay.classList.add("active");
+
+        // For demo purposes, you might want to hide it after a few seconds
+        // In production, you'd hide it when the PPT generation is complete
+        setTimeout(function () {
+          document.getElementById("pptForm").submit();
+        }, 5000); // Show loading for 5 seconds before submitting the form
+      }
+
+      // Validate file and show loading screen
+      function validateAndSubmit() {
+        const fileInput = document.getElementById("fileUpload");
+        const fileTypeExtension = selectedFileType.toLowerCase();
+
+        if (fileInput.files.length === 0) {
+          alert("Please select a file to upload!");
+          return;
         }
-        
-        // Handle slide count confirmation
-        document.getElementById('yesDownload').addEventListener('click', function() {
-            slideCountModal.hide();
-            document.getElementById('pptForm').submit();
+
+        const fileName = fileInput.files[0].name;
+        const fileExtension = fileName.split(".").pop().toLowerCase();
+
+        if (fileExtension !== fileTypeExtension) {
+          alert(
+            `Please upload a ${fileTypeExtension.toUpperCase()} file as selected in Step 1.`
+          );
+          return;
+        }
+
+        // Show the slide count confirmation modal
+        // In a real implementation, you might want to calculate this based on the file content
+        document.getElementById("slideCount").textContent =
+          Math.floor(Math.random() * 10) + 5; // Random number between 5-15 for demo
+        slideCountModal.show();
+      }
+
+      // Handle slide count confirmation
+      document
+        .getElementById("yesDownload")
+        .addEventListener("click", function () {
+          slideCountModal.hide();
+          document.getElementById("pptForm").submit();
         });
-        
-        document.getElementById('noDownload').addEventListener('click', function() {
-            slideCountModal.hide();
-            customSlideCountModal.show();
+
+      document
+        .getElementById("noDownload")
+        .addEventListener("click", function () {
+          slideCountModal.hide();
+          customSlideCountModal.show();
         });
-        
-        document.getElementById('confirmCustomSlides').addEventListener('click', function() {
-            const customCount = document.getElementById('customSlideCount').value;
-            document.getElementById('pptForm').insertAdjacentHTML('beforeend', 
-                `<input type="hidden" name="custom_slide_count" value="${customCount}">`);
-            customSlideCountModal.hide();
-            document.getElementById('pptForm').submit();
+
+      document
+        .getElementById("confirmCustomSlides")
+        .addEventListener("click", function () {
+          const customCount = document.getElementById("customSlideCount").value;
+          document
+            .getElementById("pptForm")
+            .insertAdjacentHTML(
+              "beforeend",
+              `<input type="hidden" name="custom_slide_count" value="${customCount}">`
+            );
+          customSlideCountModal.hide();
+          document.getElementById("pptForm").submit();
         });
-        
-        // Set default font selection
-        window.onload = function() {
-            selectFont('Calibri');
-        };
+
+      // Set default font selection
+      window.onload = function () {
+        selectFont("Calibri");
+      };
+      function toggleCustomSlides() {
+        const customSlidesContainer = document.getElementById("custom-slides-container");
+        if (customSlidesContainer.style.display === "none" || customSlidesContainer.style.display === "") {
+          customSlidesContainer.style.display = "block";
+        } else {
+          customSlidesContainer.style.display = "none";
+        }
+      }
     </script>
-</body>
+
+
+  </body>
 </html>

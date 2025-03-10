@@ -110,11 +110,13 @@ Requirements:
 - IMPORTANT: Each slide MUST start with 'Slide X Title: [Title]' where X is the slide number
 - IMPORTANT: Each slide MUST have EXACTLY 5 bullet points - no more, no less
 - IMPORTANT: Each bullet point MUST start with a dash '-'
-- CRUCIAL: Keep each bullet point VERY concise - ideally 60 characters or less, maximum 80 characters
+- CRUCIAL: Keep each bullet point VERY concise - ideally 60 characters or less not less than 50, maximum 80 characters
 - Use short phrases instead of complete sentences where possible
 - Avoid long, wordy explanations in bullet points
 - Prefer keywords and key phrases that convey the essential information
 - Do not include any text that is not part of a slide title or bullet point
+- And try to Cover Maximum points 
+- if title or subtitle already given in file so consider that important for summarizing
 
 Example format (exactly follow this pattern):
 Slide 1 Title: Introduction
@@ -266,15 +268,7 @@ def create_ppt(summary, output_path, title=None, goal=None, audience=None, font_
     
     # Calculate content font size - adjust these thresholds based on testing
     # These values ensure text fits within standard slide dimensions
-    if max_line_length > 100:
-        content_font_size = Pt(20)
-    elif max_line_length > 95:
-        content_font_size = Pt(21)
-    elif max_line_length > 90:
-        content_font_size = Pt(22)
-    elif max_line_length > 85:
-        content_font_size = Pt(23)
-    elif max_line_length > 80:
+    if max_line_length > 80:
         content_font_size = Pt(24)
     elif max_line_length > 75:
         content_font_size = Pt(25)
