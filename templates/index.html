@@ -25,18 +25,16 @@
         border-radius: 10px;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.337);
         background-color: rgba(240, 231, 231, 0.805);
-
-       }
-        .btn-primary{
-            background-color: #744406;;
-            border: #2b2929;
-    
-        }
-        .text-center a{
-            margin-bottom: 30px;
-            color: #744406;
-            text-decoration: none;
-            text-shadow: 2px 1px 5px black;
+      }
+      .btn-primary {
+        background-color: #744406;
+        border: #2b2929;
+      }
+      .text-center a {
+        margin-bottom: 30px;
+        color: #744406;
+        text-decoration: none;
+        text-shadow: 2px 1px 5px black;
       }
       .text-center {
         margin-bottom: 30px;
@@ -58,6 +56,8 @@
         cursor: pointer;
       }
       .font-preview.selected {
+        border-color: #111111;
+        background-color: #e7f1ff;
         border-color: #111111;
         background-color: #e7f1ff;
       }
@@ -311,7 +311,7 @@
       <div class="confirmation-content">
         <div class="card">
           <div class="card-header text-center">
-            <h2>Almost Done!</h2>
+            <h2>Almost D!</h2>
           </div>
           <div class="card-body text-center">
             {% with messages = get_flashed_messages() %}
@@ -972,6 +972,29 @@ function selectFont(font) {
           document.getElementById('pptForm').submit();
         });
       }
+      // Select file type
+function selectFileType(type) {
+  selectedFileType = type;
+  document.getElementById("file_type").value = type;
+  
+  // Update visual selection
+  document.querySelectorAll(".file-type-btn").forEach((btn) => {
+    btn.classList.remove("selected");
+  });
+  
+  // Add selected class to the clicked button
+  document.querySelector(`.file-type-btn[data-type="${type}"]`).classList.add("selected");
+  
+  // Update file type labels
+  updateFileTypeLabels();
+}
+
+// Update file type labels in step 6
+function updateFileTypeLabels() {
+  const fileTypeLabel = selectedFileType.toUpperCase();
+  document.getElementById("fileTypeLabel").textContent = fileTypeLabel;
+  document.getElementById("fileTypeRequirement").textContent = fileTypeLabel;
+}
 
       // Function to toggle custom slides input
       function toggleCustomSlides() {
@@ -985,31 +1008,55 @@ function selectFont(font) {
 
       // Initialize event listeners when the document is loaded
       document.addEventListener('DOMContentLoaded', function() {
-        // Set default file type
-        selectFileType('pdf');
-        
-        // Set up initial event listeners
-        document.getElementById('yesDownload').addEventListener('click', function() {
-          document.getElementById('slideCountModal').classList.remove('show');
-          document.getElementById('loading-overlay').classList.add('active');
-          document.getElementById('pptForm').submit();
-        });
-        
-        document.getElementById('noDownload').addEventListener('click', toggleCustomSlides);
-        
-        document.getElementById('confirmCustomSlides').addEventListener('click', function() {
-          const customSlides = document.getElementById('custom-slides').value;
-          const customSlideInput = document.createElement('input');
-          customSlideInput.type = 'hidden';
-          customSlideInput.name = 'custom_slide_count';
-          customSlideInput.value = customSlides;
-          document.getElementById('pptForm').appendChild(customSlideInput);
-          
-          document.getElementById('slideCountModal').classList.remove('show');
-          document.getElementById('loading-overlay').classList.add('active');
-          document.getElementById('pptForm').submit();
-        });
-      });
+  // Set default file type
+  selectFileType('pdf');
+  
+  // Set up event listeners for confirmation modal
+  document.getElementById('yes-download').addEventListener('click', function() {
+    document.getElementById('response-input').value = 'yes';
+    document.getElementById('confirm-form').submit();
+    document.getElementById('confirmation-modal').classList.remove('show');
+    document.getElementById('loading-overlay').classList.add('active');
+  });
+  
+  document.getElementById('no-download').addEventListener('click', function() {
+    document.getElementById('custom-slides-container').style.display = 'block';
+  });
+  
+  document.getElementById('submit-custom-slides').addEventListener('click', function() {
+    const customSlides = document.getElementById('custom-slides').value;
+    document.getElementById('custom-slides-input').value = customSlides;
+    document.getElementById('response-input').value = 'custom';
+    document.getElementById('confirm-form').submit();
+    document.getElementById('confirmation-modal').classList.remove('show');
+    document.getElementById('loading-overlay').classList.add('active');
+  });
+});
+
+// Function to validate and submit the form
+function validateAndSubmit() {
+  // Validate file upload
+  const fileInput = document.getElementById('fileUpload');
+  if (!fileInput.files.length) {
+    alert('Please upload a file!');
+    return;
+  }
+  
+  // Check file extension matches selected type
+  const fileName = fileInput.files[0].name;
+  const fileExtension = fileName.split('.').pop().toLowerCase();
+  
+  if (selectedFileType === 'pdf' && fileExtension !== 'pdf') {
+    alert('Please upload a PDF file as selected in Step 1.');
+    return;
+  } else if (selectedFileType === 'docx' && fileExtension !== 'docx') {
+    alert('Please upload a Word document (DOCX) as selected in Step 1.');
+    return;
+  }
+  
+  // Show confirmation modal instead of submitting directly
+  document.getElementById('confirmation-modal').classList.add('show');
+}
     </script>
   </body>
 </html>
