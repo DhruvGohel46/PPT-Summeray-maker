@@ -373,7 +373,7 @@ def setup():
 def estimate_slides(summary):
     # Count the number of slide titles in the structured summary
     lines = summary.strip().split('\n')
-    slide_count = 0
+    slide_count = 1
     
     for line in lines:
         if line.startswith('Slide') and 'Title:' in line:

@@ -29,10 +29,12 @@
       .btn-primary {
         background-color: #b47626;
         border: #2b2929;
+        transition: transform 0.2s ease;
       }
       .btn-primary:hover {
         background-color: #744406;
         border: #2b2929;
+        transform: scale(1.05);
       }
       .text-center a {
         margin-bottom: 30px;
@@ -47,9 +49,20 @@
       .step {
         display: none;
         margin-bottom: 20px;
+        transition: opacity 0.5s ease, transform 0.5s ease;
       }
       .step.active {
         display: block;
+        opacity: 1;
+        transform: translateX(0);
+      }
+      .step.next {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+      .step.prev {
+        opacity: 0;
+        transform: translateX(-100%);
       }
       .font-preview {
         padding: 10px;
@@ -57,14 +70,19 @@
         border: 1px solid #ddd;
         border-radius: 5px;
         cursor: pointer;
+        transition: all 0.2s ease;
       }
       .font-preview.selected {
         border-color: #111111;
         background-color: #e7f1ff;
       }
+      .font-preview:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      }
       .file-type-selection {
         display: flex;
-        justify-content: center;
+        justify-content: space-evenly;
         gap: 15px;
         margin-bottom: 20px;
       }
@@ -74,10 +92,11 @@
         border-radius: 8px;
         text-align: center;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.2s ease;
       }
       .file-type-btn:hover {
         border-color: #111111;
+        transform: scale(1.05);
       }
       .file-type-btn.selected {
         border-color: #111111;
@@ -112,7 +131,7 @@
         z-index: 9999;
         opacity: 0;
         visibility: hidden;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
       }
 
       #loading-overlay.active {
@@ -135,6 +154,7 @@
         border-radius: 8px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         display: flex;
+        flex-direction: column;
         flex-direction: column;
         justify-content: center;
         align-items: center;
@@ -302,12 +322,13 @@
               id="pptTitle"
               name="title"
               required
-            />
+            >
+            
           </div>
           <div class="mt-4 d-flex justify-content-between">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-primary"
               onclick="prevStep(2)"
             >
               Previous
@@ -337,7 +358,7 @@
           <div class="mt-4 d-flex justify-content-between">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-primary"
               onclick="prevStep(3)"
             >
               Previous
@@ -367,7 +388,7 @@
           <div class="mt-4 d-flex justify-content-between">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-primary"
               onclick="prevStep(4)"
             >
               Previous
@@ -666,7 +687,7 @@
           <div class="mt-4 d-flex justify-content-between">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-primary"
               onclick="prevStep(5)"
             >
               Previous
@@ -701,7 +722,7 @@
           <div class="mt-4 d-flex justify-content-between">
             <button
               type="button"
-              class="btn btn-secondary"
+              class="btn btn-primary"
               onclick="prevStep(6)"
             >
               Previous
