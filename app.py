@@ -349,6 +349,7 @@ def create_ppt(summary, output_path, title=None, goal=None, audience=None, font_
     except Exception as e:
         logger.error(f"Error saving PowerPoint: {str(e)}")
         return False
+    
 @app.route('/', methods=['GET'])
 def index():
     """Render the initial page with file type selection"""
