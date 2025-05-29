@@ -738,6 +738,36 @@
         </div>
       </form>
 
+      <!-- Slide Count Confirmation Modal -->
+      <div
+        class="modal fade"
+        id="slideCountModal"
+        tabindex="-1"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Confirm Slide Count</h5>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              ></button>
+            </div>
+            <div class="modal-body">
+              <p>Based on your document, we estimate <span id="slideCount">10</span> slides.</p>
+              <p>Would you like to proceed with this number of slides?</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" id="yesDownload">Yes, Proceed</button>
+              <button type="button" class="btn btn-secondary" id="noDownload">No, I want to customize</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Custom Slide Count Modal -->
       <div
         class="modal fade"
@@ -799,6 +829,19 @@
       const customSlideCountModal = new bootstrap.Modal(
         document.getElementById("customSlideCountModal")
       );
+
+      // Add the fixed toggleCustomSlides function
+      function toggleCustomSlides(event) {
+        event.preventDefault(); // Prevent default button behavior
+        const customSlidesContainer = document.getElementById('custom-slides-container');
+        if (customSlidesContainer) {
+          if (customSlidesContainer.style.display === 'none' || !customSlidesContainer.style.display) {
+            customSlidesContainer.style.display = 'block';
+          } else {
+            customSlidesContainer.style.display = 'none';
+          }
+        }
+      }
 
       // Function to go to next step
       function nextStep(step) {
@@ -937,17 +980,12 @@
         const fileExtension = fileName.split(".").pop().toLowerCase();
 
         if (fileExtension !== fileTypeExtension) {
-          alert(
-            `Please upload a ${fileTypeExtension.toUpperCase()} file as selected in Step 1.`
-          );
+          alert(`Please upload a ${fileTypeExtension.toUpperCase()} file as selected in Step 1.`);
           return;
         }
 
-        // Show the slide count confirmation modal
-        // In a real implementation, you might want to calculate this based on the file content
-        document.getElementById("slideCount").textContent =
-          Math.floor(Math.random() * 10) + 5; // Random number between 5-15 for demo
-        slideCountModal.show();
+        showLoadingScreen();
+        document.getElementById("pptForm").submit();
       }
 
       // Handle slide count confirmation
@@ -983,19 +1021,6 @@
       window.onload = function () {
         selectFont("Calibri");
       };
-      function toggleCustomSlides() {
-        const customSlidesContainer = document.getElementById(
-          "custom-slides-container"
-        );
-        if (
-          customSlidesContainer.style.display === "none" ||
-          customSlidesContainer.style.display === ""
-        ) {
-          customSlidesContainer.style.display = "block";
-        } else {
-          customSlidesContainer.style.display = "none";
-        }
-      }
     </script>
   </body>
 </html>

@@ -91,10 +91,10 @@ def summarize_text(text, goal=None, audience=None, num_slides=None):
         if not api_key:
             logger.warning("No API key found in environment. Using fallback method.")
             # Note: In production, remove this hardcoded key and use only environment variables
-            api_key = "AIzaSyATGHln42rKoibkMUByJp3cPYpO5322zUs"
+            api_key = "AIzaSyB1b1sn-m9Hyw83VrindOjyQTZrlx0YGw8"
         
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash")
 
         # Ensure goal and audience are not None or empty
         goal_text = goal if goal else "General goal"
@@ -117,6 +117,9 @@ Requirements:
 - Do not include any text that is not part of a slide title or bullet point
 - And try to Cover Maximum points 
 - if title or subtitle already given in file so consider that important for summarizing
+- stricky follow all the rules 
+- make the best summery of the text and not to miss any part of given text
+
 
 Example format (exactly follow this pattern):
 Slide 1 Title: Introduction
