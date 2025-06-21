@@ -87,11 +87,11 @@ def extract_text_from_docx(docx_path):
 def summarize_text(text, goal=None, audience=None, num_slides=None):
     try:
         # Get API key from environment variable
-        api_key = os.environ.get('GOOGLE_API_KEY')
+        api_key = os.environ.get('GEMINI_API_KEY')
         if not api_key:
             logger.warning("No API key found in environment. Using fallback method.")
             # Note: In production, remove this hardcoded key and use only environment variables
-            api_key = "AIzaSyB1b1sn-m9Hyw83VrindOjyQTZrlx0YGw8"
+            api_key = "AIzaSyC8YQ0xsE1RfPByU6NeVZZrWItXpSgeHpw"
         
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-2.0-flash")
@@ -99,7 +99,7 @@ def summarize_text(text, goal=None, audience=None, num_slides=None):
         # Ensure goal and audience are not None or empty
         goal_text = goal if goal else "General goal"
         audience_text = audience if audience else "General audience"
-        slides_count = f" Create exactly {num_slides} slides." if num_slides else " Create around 5-7 slides."
+        slides_count = f" Create exactly {num_slides} slides." if num_slides else " Create around 8-15 slides."
 
         # Updated prompt to ensure proper formatting with concise bullet points
         prompt = f"""Please summarize the following text into a structured PowerPoint presentation format.
@@ -272,21 +272,21 @@ def create_ppt(summary, output_path, title=None, goal=None, audience=None, font_
     # Calculate content font size - adjust these thresholds based on testing
     # These values ensure text fits within standard slide dimensions
     if max_line_length > 80:
-        content_font_size = Pt(24)
+        content_font_size = Pt(20)
     elif max_line_length > 75:
-        content_font_size = Pt(25)
+        content_font_size = Pt(21)
     elif max_line_length > 70:
-        content_font_size = Pt(26)
+        content_font_size = Pt(22)
     elif max_line_length > 65:
-        content_font_size = Pt(27)
+        content_font_size = Pt(23)
     elif max_line_length > 60:
-        content_font_size = Pt(28)
+        content_font_size = Pt(24)
     elif max_line_length > 55:
-        content_font_size = Pt(29)
+        content_font_size = Pt(25)
     elif max_line_length > 50:
-        content_font_size = Pt(30)
+        content_font_size = Pt(28)
     else:
-        content_font_size = Pt(32)
+        content_font_size = Pt(30)
     
     logger.info(f"Using consistent content font size of {content_font_size.pt} points for all slides")
     
